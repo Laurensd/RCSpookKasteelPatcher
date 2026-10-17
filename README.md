@@ -124,6 +124,7 @@ hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game 
 | Crash "onverwachte fout" bij het laden van een level | Patch in de lettertype-code van de engine (`RcHcGame.dat`) |
 | Naamvenster/afsluitvraag buiten beeld, menu lijkt vast | Dialogen centreren op het hoofdscherm (`RcHcMenu.dat`) |
 | Menu in geëmuleerd 16-bit kleur | Menu kiest 32-bit (`RcHcMenu.dat`) |
+| Menu zet het bureaublad op 800×600 (andere monitoren schuiven op, alt-tab hapert) | Menu laat de resolutie ongemoeid en staat gecentreerd op het hoofdscherm (`RcHcMenu.dat`) |
 | Klein venster, oude DirectX/Glide-problemen | dgVoodoo2, schermvullend 4:3 |
 | Wazig beeld op moderne schermen (640×480 opgerekt) | dgVoodoo2 rendert op schermresolutie (`--resolution`) |
 | Cd nodig | Niet meer: alles staat lokaal |

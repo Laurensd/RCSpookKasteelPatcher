@@ -23,6 +23,7 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 ### Opgelost
 - Met `--wasd` bestuurde de joystick-stick niets meer (die stuurde de pijltjestoetsen); de stick volgt nu W/A/S/D.
+- Het menu zette het bureaublad op 800×600, waardoor andere monitoren opschoven en alt-tab misging. Het menu laat de schermresolutie nu ongemoeid en verschijnt als 800×600-beeld gecentreerd op het hoofdscherm, met zwart eromheen.
 - In venstermodus (alt-enter of `FullScreenMode = false`) stond het spelvenster te hoog, met de titelbalk op een monitor erboven of buiten beeld. dgVoodoo2 centreert het venster nu op het hoofdscherm (`CenterAppWindow = true`).
 
 ## [0.1.0] - 2026-10-17
