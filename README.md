@@ -52,7 +52,17 @@ Vereist de [.NET 10 SDK](https://dotnet.microsoft.com/download).
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-De executables komen in `dist/win-x64` en `dist/linux-x64`.
+De executables komen in `dist/win-x64` en `dist/linux-x64`. Tests draaien met `dotnet test RedCatPatcher.slnx`.
+
+### Release maken
+
+Bij elke push en pull request draait GitHub Actions de tests op Windows en Linux.
+Een release bouw je door een versietag te pushen. Zijn de tests geslaagd, dan publiceert de workflow de Windows-zip en de Linux-tar.gz als GitHub Release:
+
+```
+git tag v0.1.0
+git push origin v0.1.0
+```
 
 ## Juridisch
 

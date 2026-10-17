@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RedCatPatcher/RedCatPatcher.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RedCatPatcher.Tests/RedCatPatcher.Tests.csproj" />
+  </Folder>
+</Solution>
