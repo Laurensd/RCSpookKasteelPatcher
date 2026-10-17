@@ -1,0 +1,65 @@
+# RedCat Spookkasteel — patcher
+
+Maakt de Nederlandse cd-rom **RedCat Spookkasteel** (Davilex, 2000) weer speelbaar op Windows 10/11
+en op Linux via Proton/Wine (Steam Deck, Legion Go S).
+
+Je levert zelf de disc aan, als `.cue` + `.bin` of als `.iso`. De patcher haalt het spel van de disc, past de fixes toe en
+installeert dgVoodoo2. Daarna start je het spel met `RedCat.exe`, zonder installatie en zonder cd.
+
+## Gebruik
+
+1. Zet `RedCatPatcher.exe` in een map met je disc-image, bijvoorbeeld:
+   ```
+   RedCatPatcher.exe
+   RedCatDisc\RedCat.cue
+   RedCatDisc\RedCat.bin
+   ```
+2. Dubbelklik op `RedCatPatcher.exe`. De patcher zoekt de disc zelf; anders kun je het `.cue`-bestand in het venster slepen.
+3. Start `RedCat Spookkasteel\RedCat.exe`.
+
+Opties (opdrachtregel):
+
+```
+RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo] [--yes]
+```
+
+`--dgvoodoo-zip` installeert offline met een zelf gedownloade
+[dgVoodoo2 v2.87.5](https://github.com/dege-diosg/dgVoodoo2/releases/tag/v2.87.5).
+
+### Linux / Steam Deck
+
+- Draai de Linux-versie van de patcher (`RedCatPatcher`), of de Windows-versie via Proton.
+- Voeg `RedCat Spookkasteel/RedCat.exe` in Steam toe als niet-Steam-game en kies bij Compatibiliteit een Proton-versie.
+
+## Wat er wordt opgelost
+
+| Probleem | Fix |
+|---|---|
+| Installer loopt vast (`Verdanaz.ttf`) | Geen installatie meer nodig; het spel draait vanuit de map |
+| Crash "onverwachte fout" bij het laden van een level | Patch in de lettertype-code van de engine (`RcHcGame.dat`) |
+| Naamvenster/afsluitvraag buiten beeld, menu lijkt vast | Dialogen centreren op het hoofdscherm (`RcHcMenu.dat`) |
+| Menu in geëmuleerd 16-bit kleur | Menu kiest 32-bit (`RcHcMenu.dat`) |
+| Klein venster, oude DirectX/Glide-problemen | dgVoodoo2, schermvullend 4:3 |
+| Cd nodig | Niet meer: alles staat lokaal |
+
+Details en analyse: [docs/TECHNISCH.md](docs/TECHNISCH.md).
+
+## Zelf bouwen
+
+Vereist de [.NET 10 SDK](https://dotnet.microsoft.com/download).
+
+```
+powershell -ExecutionPolicy Bypass -File build.ps1
+```
+
+De executables komen in `dist/win-x64` en `dist/linux-x64`.
+
+## Juridisch
+
+Deze repository bevat geen bestanden van het spel of van dgVoodoo2. De patcher werkt alleen met een disc die je zelf bezit.
+dgVoodoo2 is gemaakt door Dege en wordt tijdens het patchen van de officiële GitHub-release gedownload.
+
+---
+
+**English:** a patcher that makes the Dutch 2000 PC game *RedCat Spookkasteel* playable on Windows 10/11 and Linux (Proton).
+Supply your own `.cue/.bin` or `.iso`, run the patcher, then start `RedCat.exe`. See [docs/TECHNISCH.md](docs/TECHNISCH.md) for the root-cause analysis.

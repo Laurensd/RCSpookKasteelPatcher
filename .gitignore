@@ -1,0 +1,14 @@
+# Disc-images en speldata zijn auteursrechtelijk beschermd: nooit committen
+*.bin
+*.cue
+*.iso
+*.img
+RedCatDisc/
+RedCat Spookkasteel/
+
+# Build-uitvoer
+bin/
+obj/
+dist/
+*.user
+.vs/
