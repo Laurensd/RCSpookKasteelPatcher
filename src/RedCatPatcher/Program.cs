@@ -31,6 +31,8 @@ if (options.ShowHelp)
           --steam / --no-steam       RedCat toevoegen aan Steam als niet-Steam-game (Linux: met Proton)
           --steam-dir <map>          Steam-map, als de patcher die niet zelf vindt
           --proton <naam>            Compatibiliteitstool voor Steam op Linux (standaard proton_experimental)
+          --debug-logs               Logbestanden van spel en menu aan laten (AdamDebug*.log e.d.), voor het
+                                     zoeken naar problemen
           --yes                      Niets vragen; bestaande installatiemap overschrijven
 
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
@@ -75,6 +77,8 @@ try
 
         Console.WriteLine($"Doel:  {outDir}");
         var keep = BackupUserData(outDir);
+        int logs = DebugLogs.Clean(outDir);
+        if (logs > 0) Console.WriteLine($"       {logs} oude {(logs == 1 ? "logbestand" : "logbestanden")} verwijderd.");
         int count = 0;
         iso.ExtractDirectory(data, outDir, _ =>
         {
@@ -109,6 +113,12 @@ try
         var result = patch.Apply(outDir, version.Build);
         Console.WriteLine($"  [{(result == PatchResult.Applied ? "ok" : "al toegepast")}] {patch.Description}");
     }
+    if (!options.DebugLogs)
+        foreach (var patch in DebugLogs.PatchesFor(version))
+        {
+            var result = patch.Apply(outDir, version.Build);
+            Console.WriteLine($"  [{(result == PatchResult.Applied ? "ok" : "al toegepast")}] {patch.Description}");
+        }
 
     // 5. Opties
     if (options.Widescreen != null || options.Wasd || options.Controller)
@@ -252,7 +262,7 @@ sealed class Options
 {
     public string? Disc, Out, DgVoodooZip;
     public string Resolution = DgVoodoo.DefaultResolution;
-    public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller;
+    public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller, DebugLogs;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
     public readonly ShortcutOptions Shortcuts = new();
@@ -281,6 +291,7 @@ sealed class Options
                     break;
                 case "--wasd": o.Wasd = true; break;
                 case "--controller": o.Controller = true; break;
+                case "--debug-logs": o.DebugLogs = true; break;
                 case "--resolution":
                     o.Resolution = Next().ToLowerInvariant();
                     if (!DgVoodoo.IsValidResolution(o.Resolution))

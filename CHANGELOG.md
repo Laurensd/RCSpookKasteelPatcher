@@ -16,6 +16,10 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 - Snelkoppelingen na het patchen (de patcher vraagt het, of gebruik `--shortcut`): op het bureaublad en in het Startmenu (Windows) of in het programmamenu (Linux).
 - Optie `--steam`: RedCat toevoegen aan Steam als niet-Steam-game, voor alle Steam-gebruikers op de computer. Op Linux en de Steam Deck stelt de patcher meteen Proton in (`--proton` om een andere versie te kiezen). Van `shortcuts.vdf` en `config.vdf` wordt eerst een backup gemaakt.
+- Optie `--debug-logs`: logbestanden van spel en menu aan laten, voor het zoeken naar problemen.
+
+### Gewijzigd
+- Spel, menu en Glide-driver schrijven standaard geen logbestanden meer in de spelmap (`AdamDebug*.log`, `Sound.log`, `GCache.Log`, een log per level in `Levels`, `MenuTrac.log`). Alleen bij een echte fout verschijnt nog `AdamError*.log` of `rchcmenu.log`. Opnieuw patchen ruimt oude logbestanden op.
 
 ### Opgelost
 - Met `--wasd` bestuurde de joystick-stick niets meer (die stuurde de pijltjestoetsen); de stick volgt nu W/A/S/D.

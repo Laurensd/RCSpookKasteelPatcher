@@ -22,7 +22,7 @@ Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>]
+              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--debug-logs]
               [--shortcut|--no-shortcut] [--steam|--no-steam] [--steam-dir <map>] [--proton <naam>] [--yes]
 ```
 
@@ -60,6 +60,7 @@ Deze zijn standaard uit (behalve de renderresolutie); zet ze aan met een vlag (o
 | `--resolution <waarde>` | Interne renderresolutie (standaard `max`: het spel wordt op schermresolutie gerenderd in plaats van op 640×480 en daarna opgerekt, dus veel scherper). Andere waarden: `2x`, `3x`, `desktop`, `1920x1080`, of `unforced` voor het originele (wazige) beeld. Kies `2x` of `unforced` als het spel op een zwakke GPU hapert |
 | `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
 | `--controller` | Gamepad-indeling voor in het spel (zie hieronder) |
+| `--debug-logs` | Logbestanden van spel en menu aan laten (`AdamDebug*.log`, `Sound.log`, `Levels\*.log`, `MenuTrac.log`, ...). Handig als je een probleem wilt uitzoeken of melden |
 
 Bijvoorbeeld:
 
@@ -126,6 +127,7 @@ hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game 
 | Klein venster, oude DirectX/Glide-problemen | dgVoodoo2, schermvullend 4:3 |
 | Wazig beeld op moderne schermen (640×480 opgerekt) | dgVoodoo2 rendert op schermresolutie (`--resolution`) |
 | Cd nodig | Niet meer: alles staat lokaal |
+| Spelmap loopt vol met logbestanden (`AdamDebug*.log`, `Levels\*.log`, ...) | Spel, menu en Glide-driver schrijven geen logs meer, alleen nog bij een echte fout (`AdamError*.log`, `rchcmenu.log`). Opnieuw patchen ruimt oude logs op |
 
 Details en analyse: [docs/TECHNISCH.md](docs/TECHNISCH.md).
 

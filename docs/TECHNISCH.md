@@ -232,6 +232,33 @@ de stick niets meer.
   verliest die functie op de controller.
 - Niet getest met een echte controller (geen beschikbaar bij het bouwen); de werking volgt uit de disassembly hierboven.
 
+## Logbestanden (standaard uit, `--debug-logs`)
+
+Bij elke start schrijven spel, menu en Glide-driver logbestanden in de spelmap. Geen INI-instelling zet dat uit: de
+sleutels in `AdamWin.ini [Debug]` (`DebugDriver`, `DebugLoading`, ...) voegen alleen extra meldingen toe, en de logger
+wordt in `WinMain` altijd geregistreerd. De patcher zet de schrijvers daarom zelf uit (`Patching/DebugLogs.cs`), tenzij
+`--debug-logs` is opgegeven. Bij opnieuw patchen verwijdert hij de oude logbestanden uit de doelmap.
+
+| Bestand | Wie | Wanneer | Patch |
+|---|---|---|---|
+| `AdamDebug%02d.log` | `RcHcGame.dat`, callback van de engine-log (`DaviTrace`) | Elke start; `[Debug] DebugFileNumber` loopt rond van 1 tot 5 | Schrijver begint met `ret` |
+| `AdamError%02d.log` | `RcHcGame.dat` | Elke start de regel `Start run ...`, daarna alleen bij fouten | Alleen de `Start run`-aanroep wordt 5× `NOP`; fouten worden nog gelogd |
+| `Sound.log` | `RcHcGame.dat`, geluidssysteem | Elke start | Schrijver begint met `ret` |
+| `Levels\<level>.log` | `RcHcGame.dat`, scriptcompiler | Per geladen level, tot ~80 kB | Na het sluiten van het vorige log springt de functie naar zijn uitgang; het `ofstream`-pointer blijft 0 en alle schrijvers testen daarop |
+| `GCache.Log` | `GlideDrv.dll` | Bij het afsluiten (inhoud van de texture- en lightmapcache) | De aanroep wordt `mov eax,1` ("gelukt") |
+| `MenuTrac.log` | `RcHcMenu.dat`, tracer | Elke start | Tracer wordt aangemaakt met `Enabled = False` (`mov byte [eax+0Ch],1` → `0`); alle schrijfmethoden testen die vlag |
+| `rchcmenu.log` | `RcHcMenu.dat`, exception-logger (Delphi, `ChangeFileExt(ParamStr(0), '.log')`) | Elke start en elk afsluiten een regel, verder bij exceptions; ingekort tot 10 kB | Alleen de regels "Exception logging started/ended" worden overgeslagen |
+| `D3DDrv.Log`, `D3DCache.Log` | `D3DDrv.dll` | Alleen met de Direct3D-driver, dus zonder dgVoodoo2 | Niet gepatcht; wel opgeruimd |
+
+`RedCat.exe` schrijft niets. Spelersgegevens, scores en `AdamWin.ini` blijven buiten het opruimen.
+
+De Win98-update heeft dezelfde code als de cd-rom, maar zijn globale variabelen en strings staan op andere adressen. Daarom
+heeft elke versie van `RcHcGame.dat` eigen patronen: 1.0.0, 1.0.1 en de XP-build (waar `esi` bij de sprong nog op de stack
+staat, dus `pop esi; jmp`). `GlideDrv.dll` en `RcHcMenu.dat` verschillen niet tussen de versies.
+
+Getest op 1.0.0: een level spelen en afsluiten, en het menu starten, laat geen enkel `.log`-bestand achter. De patronen
+voor 1.0.1 en XP komen precies één keer voor in die builds en zijn gecontroleerd door de code te disassembleren.
+
 ## Officiële updates
 
 Davilex bracht twee updates uit als Wise-installer
@@ -332,6 +359,7 @@ dus met dezelfde Proton-instellingen als in Steam.
 ## Testen zonder menu
 
 `RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).
-Met `DebugDriver=1` in `AdamWin.ini [Debug]` logt `AdamDebug*.log` de gekozen driver en modus, en met
+Patch met `--debug-logs`, anders schrijft het spel geen logbestanden. Met `DebugDriver=1` in `AdamWin.ini [Debug]`
+logt `AdamDebug*.log` dan ook de gekozen driver en modus. Met
 `FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster (zet dan ook `[Glide] Resolution` op
 `2x` of `unforced`, anders wordt het venster schermgroot).
