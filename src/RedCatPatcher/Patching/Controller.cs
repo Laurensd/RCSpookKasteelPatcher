@@ -56,16 +56,23 @@ public static class Controller
     public static PatchResult Apply(string gameDir, bool wasd, bool buttons = true)
     {
         var result = PatchTable(Path.Combine(gameDir, File), Mapping(wasd, buttons));
-        if (buttons)
-        {
-            var playerDef = Path.Combine(gameDir, "settings", "PlayerDef.ini");
-            foreach (var (action, name) in ExtraBinds)
-                IniFile.Update(playerDef, s => s.Equals("KeyBinds", StringComparison.OrdinalIgnoreCase), action,
-                    keys => keys.Trim().Length == 0 ? name
-                        : keys.Split(',').Contains(name, StringComparer.OrdinalIgnoreCase) ? keys : $"{keys},{name}",
-                    firstSectionOnly: true);
-        }
+        if (buttons) SetExtraBinds(gameDir, true);
         return result;
+    }
+
+    /// <summary>
+    /// Zet de extra toetsen (F5/F6) erbij in PlayerDef.ini, of haalt ze weer weg. De andere toetsen in die regels
+    /// blijven staan.
+    /// </summary>
+    public static void SetExtraBinds(string gameDir, bool on)
+    {
+        var playerDef = Path.Combine(gameDir, "settings", "PlayerDef.ini");
+        foreach (var (action, name) in ExtraBinds)
+            IniFile.Update(playerDef, s => s.Equals("KeyBinds", StringComparison.OrdinalIgnoreCase), action, keys =>
+            {
+                var list = keys.Split(',').Where(k => k.Trim().Length > 0 && !k.Trim().Equals(name, StringComparison.OrdinalIgnoreCase));
+                return string.Join(",", on ? list.Append(name) : list);
+            }, firstSectionOnly: true);
     }
 
     public static PatchResult PatchTable(string path, byte[] mapping)

@@ -91,7 +91,25 @@ public static class DgVoodoo
         var confEntry = zip.GetEntry("dgVoodoo.conf") ?? throw new PatchException("dgVoodoo.conf ontbreekt in de zip.");
         var confPath = Path.Combine(gameDir, "dgVoodoo.conf");
         confEntry.ExtractToFile(confPath, overwrite: true);
-        foreach (var (section, key, value) in Settings.Concat(display.Settings))
+        Set(confPath, Settings);
+        ApplyDisplay(gameDir, display);
+    }
+
+    /// <summary>
+    /// Zet alleen de beeldsleutels van <paramref name="display"/> in een bestaande dgVoodoo.conf; de rest (ook wat via
+    /// dgVoodooCpl.exe is aangepast) blijft staan. Geeft false zonder dgVoodoo.conf (gepatcht met --no-dgvoodoo).
+    /// </summary>
+    public static bool ApplyDisplay(string gameDir, DisplayOptions display)
+    {
+        var confPath = Path.Combine(gameDir, "dgVoodoo.conf");
+        if (!File.Exists(confPath)) return false;
+        Set(confPath, display.Settings);
+        return true;
+    }
+
+    private static void Set(string confPath, IEnumerable<(string Section, string Key, string Value)> settings)
+    {
+        foreach (var (section, key, value) in settings)
             IniFile.Update(confPath, s => s.Equals(section, StringComparison.OrdinalIgnoreCase), key, _ => " " + value, firstSectionOnly: true);
     }
 }

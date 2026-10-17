@@ -31,12 +31,24 @@ public static class ModernControls
 
     public const string Description = "WASD als standaardbesturing in plaats van de pijltjestoetsen";
 
-    public static void Apply(string gameDir)
+    public static void Apply(string gameDir) => Apply(gameDir, wasd: true, basisDir: null);
+
+    /// <summary>
+    /// Zet de standaardtoetsen op WASD, of (<paramref name="wasd"/> false) terug op de waarden uit
+    /// <paramref name="basisDir"/>. Alleen deze sleutels; de rest van static.ini en PlayerDef.ini blijft staan.
+    /// </summary>
+    public static void Apply(string gameDir, bool wasd, string? basisDir)
     {
-        var settings = Path.Combine(gameDir, "settings");
-        foreach (var (key, vk) in MenuDefaults)
-            IniFile.Set(Path.Combine(settings, "static.ini"), "DEFAULTSETTINGS", key, vk);
-        foreach (var (key, name) in PlayerDefBinds)
-            IniFile.Set(Path.Combine(settings, "PlayerDef.ini"), "KeyBinds", key, name);
+        if (!wasd && basisDir == null) throw new ArgumentNullException(nameof(basisDir));
+        foreach (var (file, section, keys) in new[]
+        {
+            ("static.ini", "DEFAULTSETTINGS", MenuDefaults),
+            ("PlayerDef.ini", "KeyBinds", PlayerDefBinds),
+        })
+        {
+            var path = Path.Combine(gameDir, "settings", file);
+            foreach (var (key, value) in keys)
+                IniFile.Set(path, section, key, wasd ? value : IniFile.Get(Path.Combine(basisDir!, "settings", file), section, key));
+        }
     }
 }

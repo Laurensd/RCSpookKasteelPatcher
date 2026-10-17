@@ -12,6 +12,10 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="RedCatPatcher.Tests" />
+  </ItemGroup>
+
   <!-- Single-file release builds: dotnet publish -c Release -r win-x64 (of linux-x64) -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
     <SelfContained>true</SelfContained>

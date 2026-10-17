@@ -5,6 +5,10 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 ## [Unreleased]
 
+### Toegevoegd
+- De patcher bewaart een kopie van de spelbestanden vóór de fixes (`RedCatPatcher\basis` in de spelmap) en schrijft de gekozen opties naar `RedCatLauncher.ini`. Daarmee kan de launcher later een andere keuze toepassen en terugdraaien zonder de disc.
+- Opnieuw patchen zonder opties voor breedbeeld, besturing, beeld of logs gebruikt de keuze uit `RedCatLauncher.ini`.
+
 ## [0.2.0] - 2026-10-17
 
 ### Toegevoegd
