@@ -193,7 +193,10 @@ bilinear). Anisotrope filtering bestaat alleen voor DirectX (`[DirectX] Filterin
 menu's zijn 2D-plaatjes, dus daar is geen optie voor. MSAA staat standaard op `4x`: dat ondersteunt elke Direct3D 11-GPU
 (ook de Steam Deck en DXVK), het haalt de kartelranden van de levelgeometrie weg en kost bij deze kleine scènes vrijwel
 niets. `8x`/`16x` werken alleen als de GPU ze ondersteunt. Het CRT-effect (`stretched_ar_crt`) is een schaalmodus van
-dgVoodoo zelf: scanlines en een licht gebold beeld bij het schalen naar het scherm, ook in een venster.
+dgVoodoo zelf: scanlines, afgeronde hoeken en een licht gebold beeld, toegepast bij het schalen naar het scherm. Getest:
+schermvullend werkt het met `max` (fijne scanlines, één per gerenderde lijn) en met `unforced` (grove scanlines op
+480 lijnen, het meest als een echte monitor uit 2000; combineer daarvoor `--crt --resolution unforced`). In een
+venster (`--display window`) schaalt dgVoodoo niet, dus daar is het effect niet te zien.
 
 ## Optie `--widescreen` (16:9 / 16:10)
 
