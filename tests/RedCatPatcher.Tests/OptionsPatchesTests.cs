@@ -110,4 +110,27 @@ public class OptionsPatchesTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void StartLevel_WritesRunSectionAndFreshTestPlayer()
+    {
+        var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;
+        try
+        {
+            var settings = Directory.CreateDirectory(Path.Combine(dir, "settings")).FullName;
+            File.WriteAllText(Path.Combine(dir, "RcHcGame.dat"), "");
+            File.WriteAllText(Path.Combine(settings, "PlayerDef.ini"), "[Player]\r\nLife=3\r\n");
+            File.WriteAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini"), "[Player]\r\nLife=0\r\n");
+            File.WriteAllText(Path.Combine(settings, "Game.ini"),
+                "[Run]\r\nPlayerNumber=1\r\nStartLevelNumber=1\r\nStartSubLevelNumber=2\r\nStartSubSubLevelNumber=1\r\nReplay=1\r\nIsLowEndPC=0\r\n");
+
+            StartLevel.Prepare(dir, 4);
+
+            Assert.Equal("[Run]\r\nPlayerNumber=10\r\nStartLevelNumber=1\r\nStartSubLevelNumber=4\r\nStartSubSubLevelNumber=1\r\nReplay=0\r\nIsLowEndPC=0\r\n",
+                File.ReadAllText(Path.Combine(settings, "Game.ini")));
+            Assert.Equal("[Player]\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
+            Assert.Throws<PatchException>(() => StartLevel.Prepare(dir, 6));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
 }

@@ -39,6 +39,8 @@ if (options.ShowHelp)
           --debug-logs               Logbestanden van spel en menu aan laten (AdamDebug*.log e.d.), voor het
                                      zoeken naar problemen
           --yes                      Niets vragen; bestaande installatiemap overschrijven
+          --start-level <1-5>        Niet patchen, maar het al gepatchte spel (in --out) direct in dit level starten,
+                                     met een testspeler: 1 Het Bos, 2 Het Kasteel, 3 Het Kerkhof, 4 De Grotten, 5 De Toren
 
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
         Ondersteund: versie 1.0.0 van de cd-rom, met of zonder de officiële Win98- en XP-update.
@@ -51,6 +53,21 @@ try
 {
     Console.WriteLine($"RedCat Spookkasteel patcher {typeof(Options).Assembly.GetName().Version?.ToString(3)}");
     Console.WriteLine();
+
+    if (options.StartLevel is { } level)
+    {
+        var gameDir = Path.GetFullPath(options.Out ?? Path.Combine(AppContext.BaseDirectory, GameFolderName));
+        StartLevel.Prepare(gameDir, level);
+        Console.WriteLine($"Level {level}, {StartLevel.Levels[level - 1].Name} ({StartLevel.Levels[level - 1].Map}.bsp), testspeler {StartLevel.TestPlayer}");
+        if (OperatingSystem.IsWindows())
+        {
+            StartLevel.Launch(gameDir);
+            Console.WriteLine("Het spel start. Via RedCat.exe speel je daarna gewoon weer vanuit het menu.");
+        }
+        else
+            Console.WriteLine($"Start nu via Proton/Wine: {Path.Combine(gameDir, "RcHcGame.dat")} -game");
+        return 0;
+    }
 
     var discPath = options.Disc ?? FindDisc(interactive);
     var updates = options.Updates.Count > 0
@@ -270,6 +287,7 @@ sealed class Options
     public string? Disc, Out, DgVoodooZip;
     public DisplayOptions Display = new();
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller, DebugLogs;
+    public int? StartLevel;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
     public readonly ShortcutOptions Shortcuts = new();
@@ -325,6 +343,11 @@ sealed class Options
                     o.Display = o.Display with { Antialiasing = DgVoodoo.AntialiasingValues.Contains(msaa) ? msaa : throw new PatchException($"--msaa: onbekende waarde '{msaa}' (kies off, 2x, 4x, 8x of 16x).") };
                     break;
                 case "--crt": o.Display = o.Display with { Crt = true }; break;
+                case "--start-level":
+                    var level = Next();
+                    o.StartLevel = int.TryParse(level, out int nr) && nr >= 1 && nr <= RedCatPatcher.Patching.StartLevel.Levels.Length
+                        ? nr : throw new PatchException($"--start-level: kies een level van 1 t/m {RedCatPatcher.Patching.StartLevel.Levels.Length} (niet '{level}').");
+                    break;
                 case "--yes" or "-y": o.Yes = true; break;
                 case "--help" or "-h" or "/?": o.ShowHelp = true; break;
                 default: o.Disc = args[i]; break;
