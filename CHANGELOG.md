@@ -10,6 +10,9 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 - De patcher bewaart een kopie van de spelbestanden vóór de fixes (`RedCatPatcher\basis` in de spelmap) en schrijft de gekozen opties naar `RedCatLauncher.ini`. Daarmee kan de launcher later een andere keuze toepassen en terugdraaien zonder de disc.
 - Opnieuw patchen zonder opties voor breedbeeld, besturing, beeld of logs gebruikt de keuze uit `RedCatLauncher.ini`.
 
+### Opgelost
+- Het spel komt na Start! in het menu op de voorgrond; je hoeft er niet meer met alt-tab naartoe. Dit ging vooral mis bij de eerste start na het patchen, als je tijdens het laden klikte (bijv. een dubbelklik op Start!) of een toets indrukte: `RedCat.exe` wachtte op het spel zonder berichten te verwerken, waardoor het zwarte venster "reageert niet" werd en de voorgrond vasthield. `RedCat.exe` wacht nu met een eigen lus die berichten verwerkt en het spelvenster naar voren haalt.
+
 ## [0.2.0] - 2026-10-17
 
 ### Toegevoegd

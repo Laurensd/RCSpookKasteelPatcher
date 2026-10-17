@@ -108,6 +108,59 @@ Getest (Windows 11, 3840×2160 hoofdscherm met een 2560×1440-scherm erboven): h
 het tweede scherm op zijn plek, het menu staat gecentreerd, het naamvenster in het midden ervan, en het eerste level
 draait schermvullend in 4:3. Met de originele `jne` wisselt het hoofdscherm naar 800×600 (ter vergelijking).
 
+## Fix 5 — spel komt niet naar voren (`RedCat.exe`)
+
+Symptoom: na Start! in het menu draait het spel wel, maar het staat achter het bureaublad of een ander venster en je
+moet er met alt-tab naartoe. Vooral bij de eerste start na het patchen.
+
+Analyse. `RedCat.exe` (MSVC, `D:\work\RCHorror\Motor\main.cpp`) maakt een schermvullend zwart venster (klasse
+`MOTOR`, `WS_POPUP`) en start dan met `_spawnl(P_WAIT, ...)` `rchcmenu.dat /FirstTime`. Na afloop leest het
+`settings\Menu.ini [GENERAL] EXITCODE`: 40 = `rchcgame.dat -game` starten en daarna het menu opnieuw met `/Default`,
+42 = menu opnieuw, iets anders = afsluiten. `P_WAIT` betekent `CreateProcess` + `WaitForSingleObject(INFINITE)` in
+`_spawn` (`0x4055DB`): zolang menu of spel draait verwerkt `RedCat.exe` geen berichten. Na 5 s markeert Windows het
+MOTOR-venster als "reageert niet" en vervangt dwm het door een spookvenster (klasse `Ghost`).
+
+Het spel zelf (`0x5A78A9`) doet `SetWindowPos`, `ShowWindow(SW_SHOWNORMAL)`, `UpdateWindow`, `SetFocus`, en roept
+geen `SetForegroundWindow` aan: het vertrouwt op de regel dat het eerste venster van een nieuw proces de voorgrond
+krijgt als dat mag. Gemeten (Windows 11, het echte menu bediend met gesimuleerde klikken, het voorgrondvenster elke
+100 ms gelogd):
+
+- Het menu sluit af via zijn onzichtbare `TApplication`-venster; daarna is het bureaublad (`Progman`, explorer) het
+  voorgrondvenster, niet MOTOR. `RedCat.exe` heeft dus geen voorgrondrecht als het het spel start.
+- Zonder invoer krijgt het spel toch de voorgrond (ook na 10 s wachten, ook met een open venster ernaast).
+- Valt er tussen het sluiten van het menu en het verschijnen van het spelvenster een toetsaanslag of een klik, dan
+  blijft het spelvenster achter. Een klik op het zwarte scherm (bijv. de tweede klik van een dubbelklik op Start!)
+  activeert het hangende MOTOR-venster/spookvenster. Muisbewegingen kunnen geen kwaad.
+- Dat tijdvenster is kort als alles in de cache staat (~0,1 s), maar bij de eerste start na het patchen ~0,6 s
+  (Defender scant de nieuwe bestanden) en op een tragere schijf langer. Vandaar "vooral de eerste keer".
+- `SetForegroundWindow` vanuit het spel, `SwitchToThisWindow` en topmost-trucs helpen dan niet. `AttachThreadInput`
+  aan de voorgrondthread en de Alt-toets-truc helpen wel als het bureaublad de voorgrond heeft, maar niet als het
+  hangende MOTOR-venster/spookvenster die heeft.
+- `--start-level` start het spel rechtstreeks vanuit de patcher (geen MOTOR); in de test kwam het spel naar voren.
+
+Fix: de `call [WaitForSingleObject]` in `_spawn` wordt `call 0x405920` (+ `nop`): een eigen wachtlus in de vrije ruimte
+achter de laatste functie van `.text` (bron: `Patching/GameForeground.asm`, bytes in `GameForeground.cs`; de
+`VirtualSize` van `.text` gaat mee omhoog). De lus:
+
+1. wacht met `WaitForSingleObject(proces, 50)` en geeft bij afloop hetzelfde resultaat terug als het origineel;
+2. verwerkt tussendoor de berichten van MOTOR (`PeekMessage`/`DispatchMessage`), zodat het venster niet meer hangt en
+   een klik erop `RedCat.exe` zelf het voorgrondrecht geeft. Een `WM_QUIT` wordt opnieuw gepost voor de hoofdlus;
+3. zoekt het spelvenster (`FindWindowA("RedCat", NULL)`) en roept, zolang het zichtbaar is maar niet op de voorgrond
+   staat, `SetForegroundWindow` aan, gekoppeld aan de invoer van de voorgrondthread (`AttachThreadInput`). Na 10
+   mislukte pogingen (0,5 s) drukt het één keer Alt in en los (dat geeft het proces het recht); na 40 pogingen (2 s)
+   of zodra het spel de voorgrond heeft, stopt het, zodat het je niet terugtrekt als je zelf wegklikt.
+
+De user32-functies die `RedCat.exe` niet importeert haalt de lus op met `GetModuleHandleA`/`GetProcAddress`. Ontbreekt
+er een, dan verwerkt de lus alleen berichten. `RedCat.exe` is in alle versies hetzelfde bestand (de updates vervangen
+het niet), dus er is één patroon.
+
+Getest met een nepspel (klasse `RedCat`, eerst 2 s wachten, dan hetzelfde `ShowWindow`/`SetFocus` als het spel) en het
+echte menu, ongepatcht → gepatcht: toets op het bureaublad niet → wel op de voorgrond, klik op het zwarte scherm niet →
+wel, muis bewegen en geen invoer wel → wel. Met het echte spel en dgVoodoo (warm en vers gepatcht) komt het spel naar
+voren, en de hele ronde spel → menu → Stoppen → Ja sluit `RedCat.exe` netjes af. Niet na te bootsen met het echte
+spel: invoer binnen het tijdvenster, omdat het spelvenster hier binnen ~0,6 s verschijnt. De XP-build is niet getest;
+heeft die een andere vensterklasse, dan doet stap 3 niets en blijft alleen het hangen weg.
+
 ## dgVoodoo2
 
 De Genesis3D-drivers gebruiken Glide 2 of DirectDraw/Direct3D 6. dgVoodoo2 vertaalt beide naar Direct3D 11/12.

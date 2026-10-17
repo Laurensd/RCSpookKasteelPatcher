@@ -51,6 +51,10 @@ public static class GamePatches
             "Menu laat de schermresolutie ongemoeid (geen wissel naar 800x600)",
             [new(Hex("e8 07 f5 ff ff 84 c0 75 05 e8 2a 27 f4 ff"),
                  Hex("e8 07 f5 ff ff 84 c0 eb 05 e8 2a 27 f4 ff"))]),
+
+        // RedCat.exe wacht op menu en spel zonder berichten te verwerken; het spelvenster blijft dan soms achter.
+        // Fix: eigen wachtlus die berichten verwerkt en het spelvenster naar voren haalt (zie GameForeground).
+        GameForeground.Patch,
     ];
 
     private static byte[] Hex(string s) => Convert.FromHexString(s.Replace(" ", ""));
