@@ -20,11 +20,31 @@ installeert dgVoodoo2. Daarna start je het spel met `RedCat.exe`, zonder install
 Opties (opdrachtregel):
 
 ```
-RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo] [--yes]
+RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
+              [--widescreen [16:9|16:10]] [--wasd] [--yes]
 ```
 
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
 [dgVoodoo2 v2.87.5](https://github.com/dege-diosg/dgVoodoo2/releases/tag/v2.87.5).
+
+### Extra opties
+
+Deze zijn standaard uit; zet ze aan met een vlag (of maak een snelkoppeling naar de patcher met de vlag erachter).
+
+| Vlag | Wat het doet |
+|---|---|
+| `--widescreen` | Breedbeeld 16:9 (856×480) in plaats van 4:3: breder beeld met dezelfde verticale kijkhoek, HUD-iconen niet uitgerekt en rechts uitgelijnd |
+| `--widescreen 16:10` | Hetzelfde voor 16:10-schermen (640×400), bijvoorbeeld de Steam Deck |
+| `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
+
+Bijvoorbeeld:
+
+```
+RedCatPatcher.exe --widescreen --wasd
+```
+
+Spelers die al eigen toetsen hadden ingesteld houden die; kies bij Instellingen → Instellen op Standaard om WASD te krijgen.
+Tussenfilmpjes en de tekstballonnen blijven 4:3-ontwerp en worden op breedbeeld breder getekend.
 
 ### Linux / Steam Deck
 

@@ -59,7 +59,58 @@ zijn er geen DLL-overrides nodig. Instellingen die de patcher zet in `dgVoodoo.c
 - `ScalingMode = stretched_ar`, `FullscreenAttributes = fake`: randloos schermvullend beeld in 4:3.
 - Watermerken uit.
 
-## Ideeën voor later
+## Optie `--widescreen` (16:9 / 16:10)
 
-- Breedbeeld: `Mode=` in `AdamWin.ini` en het FOV in `[Camera-*]` (`FieldOfView`), plus het HUD (`settings\HUDIcon.ini`).
-- Besturing: het spel leest toetsen via `GetAsyncKeyState`/DirectInput. De toewijzing staat in het menu onder Instellingen en in `settings\PlayerDef.ini`.
+Het spel heeft geen breedbeeldinstelling. Vier dingen zitten in de weg; de patcher lost ze alle vier op.
+
+**1. De Glide-driver kent geen breedbeeldmodus.** `GlideDrv.dll` (Genesis3D) biedt vast 512×384, 640×480, 800×600 en
+1024×768 aan, en Glide 2 zelf kent alleen vaste resoluties (`GR_RESOLUTION_*`). Daar zitten twee bruikbare tussen:
+856×480 (`0x0A`, 16:9) en 640×400 (`0x06`, 16:10). De patcher vervangt 512×384 door een van die twee, op drie plaatsen:
+de modusnaam, breedte/hoogte in de moduslijst en de `switch` in `GLIDE_DrvInit` die `grSstWinOpen` aanroept.
+
+**2. Het spel kiest zelf de modus.** Met `settings\Computer.ini [Display] AutoSelectDriver=1` zoekt
+`CAdamEngine::SelectDevice()` in de eerste geschikte driver naar `"640x480"` (met `"320x200"` als ondergrens).
+`[Engine] Mode=` in `AdamWin.ini` wordt dan niet gebruikt; met `AutoSelectDriver=0` toont de engine een kiesvenster
+voor driver en modus. De patcher vervangt daarom de zoekterm `"640x480"` in `RcHcGame.dat` door de breedbeeldmodus.
+
+**3. Het FOV staat vast.** Genesis3D berekent de projectie uit de breedte (`Scale = Width / Fov`), dus een breder
+beeld met hetzelfde FOV knipt boven en onder af (Hor−). `[Camera-LevelCamera]` en `[Camera-PlayerCamera] FieldOfView`
+in `AdamWin.ini` worden wel gelezen, maar `CAdamCamera` zet een afwijkende waarde direct terug naar 1,36
+(log: *"INI setting FieldOfView is ignored, always 1.360000"*) en de camera neemt die bij de volgende
+`geCamera_SetAttributes` over. De patcher maakt van die `jne` een `jmp` en zet in beide secties
+`FieldOfView = 1,36 × (B/H) / (4/3)`: 1,819 voor 16:9 en 1,632 voor 16:10. De verticale kijkhoek blijft gelijk
+aan het origineel (Hor+).
+
+**4. Het HUD wordt uitgerekt.** `RCHud` tekent elk icoon met `geEngine_DrawAlphaBitmap` op een schermpercentage:
+`x / 640` en `y / 480`, met de pixelposities uit `settings\HUDIcon.ini`. Op 856 pixels breed worden de iconen dan een
+derde breder. De patcher laat de twee `fmul [1/640]` in `RCHud` naar een ongebruikte kopie van de constante 1/480
+(`0x64EB38`) wijzen en zet daar `1 / (480 × B/H)` neer, dus 1/856 of 1/768. De iconen houden zo hun vorm. Iconen in de
+rechterhelft (`X >= 320`: score, toverdrank) schuiven in `HUDIcon.ini` 216 (16:9) of 128 (16:10) op, zodat ze rechts
+uitgelijnd blijven. Tussenfilmpjes en de tekstballonnen (`AdamCommunicator`, `RcCutScene`) gebruiken eigen kopieën van
+1/640 en worden nog steeds uitgerekt; die zijn gecentreerd en vallen minder op.
+
+dgVoodoo hoeft niets anders: `ScalingMode = stretched_ar` behoudt al de beeldverhouding van het spel, dus 16:9 vult een
+16:9-scherm en 16:10 krijgt op een 16:9-scherm smalle zwarte balken. Het menu (`RcHcMenu.dat`) blijft 800×600 (4:3),
+en onder Instellingen → Beeldkwaliteit staat nog "640x480".
+
+## Optie `--wasd`
+
+Het spel leest toetsen met `GetAsyncKeyState` (`UseDirectInput=0`). Welke toets bij welke actie hoort, staat in
+`settings\Player<n>.ini [KeyBinds]` (toetsnamen, bijvoorbeeld `MoveForward=W`). Dat bestand komt niet van de disc:
+het menu maakt het vóór elk spel opnieuw aan uit `PlayerDef.ini` plus de instellingen van de speler
+(`DataPlayer.pas`, `WriteToInis`). Daarbij schrijft het menu zeven toetsen: vooruit (`MoveForward`), achteruit
+(`MoveBack`), links/rechts (`TurnLeft`/`TurnRight`), schieten (`Fire`), springen (`Jump`) en ontwijken (`Walk`), plus
+`MoveLeft`/`MoveRight` als ontwijken + links/rechts (standaard `Alt+Left`).
+
+De standaardwaarden voor nieuwe spelers en voor de knop Standaard staan, als virtual-key-codes, in
+`settings\static.ini [DEFAULTSETTINGS]` (`Up`, `Down`, `Left`, `Right`, `Extra1`–`Extra3`). Het menu leest die ook
+opnieuw als de speler geen eigen toetsen heeft ingesteld. De patcher zet daar W (87), S (83), A (65) en D (68) neer, en
+zet in `PlayerDef.ini` dezelfde toetsen voor `MoveForward`, `MoveBack`, `TurnLeft`, `TurnRight` en `Alt+A`/`Alt+D`
+voor zijwaarts. Schieten (Ctrl), springen (Spatie) en ontwijken (Alt) blijven hetzelfde. Bestaande spelers met eigen toetsen
+houden die; het menu bewaart ze per speler.
+
+## Testen zonder menu
+
+`RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).
+Met `DebugDriver=1` in `AdamWin.ini [Debug]` logt `AdamDebug*.log` de gekozen driver en modus, en met
+`FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster.

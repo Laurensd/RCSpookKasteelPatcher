@@ -5,6 +5,10 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 ## [Unreleased]
 
+### Toegevoegd
+- Optie `--widescreen [16:9|16:10]`: breedbeeld (856×480 of 640×400) met een breder blikveld en een HUD dat niet wordt uitgerekt. Standaard 16:9.
+- Optie `--wasd`: W/A/S/D als standaardbesturing in plaats van de pijltjestoetsen, voor nieuwe spelers en via de knop Standaard bij Instellingen.
+
 ## [0.1.0] - 2026-10-17
 
 Eerste release. Maakt de cd-rom van RedCat Spookkasteel v1.0.0 (Davilex, 2000) speelbaar op Windows 10/11 en, via Proton/Wine, op Linux.
