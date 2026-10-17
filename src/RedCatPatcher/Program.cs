@@ -19,6 +19,8 @@ if (options.ShowHelp)
           --no-dgvoodoo              dgVoodoo2 niet installeren
           --widescreen [16:9|16:10]  Breedbeeld in plaats van 4:3 (standaard 16:9)
           --wasd                     WASD als standaardbesturing in plaats van de pijltjestoetsen
+          --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
+                                     scherm toelaat). Bijv. 2x, 3x, desktop, 1920x1080, of unforced (origineel)
           --yes                      Niets vragen; bestaande installatiemap overschrijven
 
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
@@ -95,8 +97,8 @@ try
     {
         Console.WriteLine();
         var zip = await DgVoodoo.GetZipAsync(options.DgVoodooZip, msg => Console.WriteLine(msg));
-        DgVoodoo.Install(zip, outDir);
-        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"})");
+        DgVoodoo.Install(zip, outDir, options.Resolution);
+        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"}, renderresolutie {options.Resolution})");
     }
 
     Console.WriteLine();
@@ -189,6 +191,7 @@ static void Pause(bool interactive)
 sealed class Options
 {
     public string? Disc, Out, DgVoodooZip;
+    public string Resolution = DgVoodoo.DefaultResolution;
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd;
     public Widescreen? Widescreen;
 
@@ -210,6 +213,11 @@ sealed class Options
                         o.Widescreen = Widescreen.Parse(args[++i]) ?? throw new PatchException($"--widescreen: onbekende beeldverhouding '{args[i]}' (kies 16:9 of 16:10).");
                     break;
                 case "--wasd": o.Wasd = true; break;
+                case "--resolution":
+                    o.Resolution = Next().ToLowerInvariant();
+                    if (!DgVoodoo.IsValidResolution(o.Resolution))
+                        throw new PatchException($"--resolution: onbekende waarde '{o.Resolution}' (bijv. max, 2x, desktop, 1920x1080 of unforced).");
+                    break;
                 case "--yes" or "-y": o.Yes = true; break;
                 case "--help" or "-h" or "/?": o.ShowHelp = true; break;
                 default: o.Disc = args[i]; break;

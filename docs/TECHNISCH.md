@@ -58,6 +58,38 @@ zijn er geen DLL-overrides nodig. Instellingen die de patcher zet in `dgVoodoo.c
 - `VRAM = 128`: de originele D3D-driver ziet meer dan 2 GB videogeheugen als negatief getal.
 - `ScalingMode = stretched_ar`, `FullscreenAttributes = fake`: randloos schermvullend beeld in 4:3.
 - Watermerken uit.
+- `CenterAppWindow = true`: in venstermodus (`FullScreenMode = false` of alt-enter) zet het spel zijn venster op y=-73,
+  zodat de titelbalk en de bovenste 40 pixels op een monitor boven het hoofdscherm vallen (of buiten beeld). dgVoodoo
+  centreert het venster nu op het hoofdscherm. Fake fullscreen (de standaard) merkt hier niets van.
+- `[Glide] Resolution = max` (aan te passen met `--resolution`, zie hieronder).
+
+De patcher zoekt elke sleutel binnen zijn eigen sectie (`IniFile`): `Resolution` staat zowel in `[Glide]` als in `[DirectX]`.
+
+### Renderresolutie (`--resolution`)
+
+Het spel kiest zelf een Glide-modus van hooguit 640x480 (856x480 of 640x400 met `--widescreen`). Zonder
+geforceerde resolutie (`unforced`, de standaard van dgVoodoo) rendert dgVoodoo op die resolutie en rekt het resultaat
+daarna op tot schermgrootte; op een groot scherm is dat wazig. Met `[Glide] Resolution` rendert dgVoodoo de 3D-scène
+direct op een hogere resolutie; het spel merkt daar niets van (het ziet nog steeds 640x480).
+
+- Standaard `max`: de grootste resolutie met de beeldverhouding van het spel die op het bureaublad past, bijvoorbeeld
+  1440x1080 (4:3) of 1920x1076 (16:9) op een 1080p-scherm, 3840x2153 (16:9) op 4K. Het opschalen naar het scherm valt
+  dan (bijna) weg. dgVoodoo leest de bureaubladresolutie zelf bij het starten, dus de patcher hoeft die niet te kennen
+  en een ander scherm werkt zonder opnieuw patchen.
+- Andere waarden worden ongewijzigd doorgegeven: `2x`/`3x` (veelvoud van de spelresolutie), `max_isf` (grootste
+  gehele veelvoud dat past), `desktop`, een vaste resolutie zoals `1920x1080`, of `unforced` voor het originele beeld.
+- Alleen `[Glide]`: het spel zelf tekent via Glide. `[DirectX] Resolution` blijft `unforced`, want de menu's
+  (`RcHcMenu.dat`, DirectDraw) zijn 2D-plaatjes die daar niet scherper van worden.
+- Getest (4K-scherm, 16:9): beeld en HUD kloppen op `2x` (1712x960) en `max` (3840x2153), ook het pauzemenu in het spel.
+- In een venster (`FullScreenMode = false`) bepaalt de geforceerde resolutie de venstergrootte; met `max` wordt het
+  venster dus zo groot als het scherm. Gebruik daar `2x`.
+
+Prestaties en Proton: de scènes zijn klein (een spel uit 2000), dus ook 4K kost een moderne GPU weinig. Onder Proton
+gaat dgVoodoo via DXVK (Direct3D 11 → Vulkan); dat verandert niets aan de instelling. Op de Steam Deck (en andere
+gamescope-sessies) is het "bureaublad" de gamescope-resolutie, 1280x800 op het eigen scherm: `max` wordt daar
+1280x717 (16:9) of 1066x800 (4:3), ongeveer 2x de originele resolutie en licht voor de APU. Hapert het toch (zwakke
+iGPU, groot extern scherm), patch dan opnieuw met `--resolution 2x` of `--resolution unforced`, of pas
+`Resolution` onder `[Glide]` in `dgVoodoo.conf` (of via `dgVoodooCpl.exe`) aan.
 
 ## Optie `--widescreen` (16:9 / 16:10)
 
@@ -113,4 +145,5 @@ houden die; het menu bewaart ze per speler.
 
 `RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).
 Met `DebugDriver=1` in `AdamWin.ini [Debug]` logt `AdamDebug*.log` de gekozen driver en modus, en met
-`FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster.
+`FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster (zet dan ook `[Glide] Resolution` op
+`2x` of `unforced`, anders wordt het venster schermgroot).

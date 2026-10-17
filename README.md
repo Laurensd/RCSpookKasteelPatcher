@@ -21,7 +21,7 @@ Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--yes]
+              [--widescreen [16:9|16:10]] [--wasd] [--resolution <waarde>] [--yes]
 ```
 
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
@@ -29,12 +29,13 @@ RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--dgvoodoo-zip <zip>] 
 
 ### Extra opties
 
-Deze zijn standaard uit; zet ze aan met een vlag (of maak een snelkoppeling naar de patcher met de vlag erachter).
+Deze zijn standaard uit (behalve de renderresolutie); zet ze aan met een vlag (of maak een snelkoppeling naar de patcher met de vlag erachter).
 
 | Vlag | Wat het doet |
 |---|---|
 | `--widescreen` | Breedbeeld 16:9 (856×480) in plaats van 4:3: breder beeld met dezelfde verticale kijkhoek, HUD-iconen niet uitgerekt en rechts uitgelijnd |
 | `--widescreen 16:10` | Hetzelfde voor 16:10-schermen (640×400), bijvoorbeeld de Steam Deck |
+| `--resolution <waarde>` | Interne renderresolutie (standaard `max`: het spel wordt op schermresolutie gerenderd in plaats van op 640×480 en daarna opgerekt, dus veel scherper). Andere waarden: `2x`, `3x`, `desktop`, `1920x1080`, of `unforced` voor het originele (wazige) beeld. Kies `2x` of `unforced` als het spel op een zwakke GPU hapert |
 | `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
 
 Bijvoorbeeld:
@@ -60,6 +61,7 @@ Tussenfilmpjes en de tekstballonnen blijven 4:3-ontwerp en worden op breedbeeld 
 | Naamvenster/afsluitvraag buiten beeld, menu lijkt vast | Dialogen centreren op het hoofdscherm (`RcHcMenu.dat`) |
 | Menu in geëmuleerd 16-bit kleur | Menu kiest 32-bit (`RcHcMenu.dat`) |
 | Klein venster, oude DirectX/Glide-problemen | dgVoodoo2, schermvullend 4:3 |
+| Wazig beeld op moderne schermen (640×480 opgerekt) | dgVoodoo2 rendert op schermresolutie (`--resolution`) |
 | Cd nodig | Niet meer: alles staat lokaal |
 
 Details en analyse: [docs/TECHNISCH.md](docs/TECHNISCH.md).
