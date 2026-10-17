@@ -63,7 +63,7 @@ Deze zijn standaard uit (behalve de renderresolutie, vsync en 4x MSAA); zet ze a
 | `--fps-limit <n>` | Maximaal n beelden per seconde, bijvoorbeeld `60`. Standaard geen limiet: vsync houdt het beeld gelijk met het scherm. Het spel rekent met de echte tijd, dus ook op 144 of 240 Hz lopen beweging en sprongen even snel |
 | `--no-vsync` | Verticale synchronisatie uit. Kan beeldscheuren geven; combineer eventueel met `--fps-limit` |
 | `--msaa <waarde>` | Anti-aliasing (gladde randen): `off`, `2x`, `4x` (standaard), `8x` of `16x` |
-| `--crt` | Retro-effect van een oude beeldbuis: scanlines en een licht gebold beeld |
+| `--crt` | Retro-effect van een oude beeldbuis: scanlines en een licht gebold beeld (niet in een venster). Het echtst met `--crt --resolution unforced` |
 | `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
 | `--controller` | Gamepad-indeling voor in het spel (zie hieronder) |
 | `--debug-logs` | Logbestanden van spel en menu aan laten (`AdamDebug*.log`, `Sound.log`, `Levels\*.log`, `MenuTrac.log`, ...). Handig als je een probleem wilt uitzoeken of melden |
