@@ -1,5 +1,6 @@
 using RedCatPatcher;
 using RedCatPatcher.Disc;
+using RedCatPatcher.Install;
 using RedCatPatcher.Patching;
 using RedCatPatcher.Updates;
 
@@ -26,6 +27,10 @@ if (options.ShowHelp)
                                      LB/RB wapen wisselen, Back scores, Start menu (alleen in het spel, niet in het menu)
           --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
                                      scherm toelaat). Bijv. 2x, 3x, desktop, 1920x1080, of unforced (origineel)
+          --shortcut / --no-shortcut Snelkoppeling op het bureaublad en in het Startmenu (Linux: programmamenu)
+          --steam / --no-steam       RedCat toevoegen aan Steam als niet-Steam-game (Linux: met Proton)
+          --steam-dir <map>          Steam-map, als de patcher die niet zelf vindt
+          --proton <naam>            Compatibiliteitstool voor Steam op Linux (standaard proton_experimental)
           --yes                      Niets vragen; bestaande installatiemap overschrijven
 
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
@@ -139,11 +144,14 @@ try
         Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"}, renderresolutie {options.Resolution})");
     }
 
+    // 7. Snelkoppelingen en Steam (vraagt interactief j/N als er geen optie is opgegeven)
+    Shortcuts.Run(outDir, options.Shortcuts, interactive, Ask);
+
     Console.WriteLine();
     Console.WriteLine("Klaar! Start het spel met:");
     Console.WriteLine($"  {Path.Combine(outDir, "RedCat.exe")}");
-    if (!OperatingSystem.IsWindows())
-        Console.WriteLine("  (Linux/Steam Deck: voeg RedCat.exe toe als niet-Steam-game en kies Proton als compatibiliteitstool.)");
+    if (!OperatingSystem.IsWindows() && options.Shortcuts.Steam != true)
+        Console.WriteLine("  (Linux/Steam Deck: voeg RedCat.exe toe aan Steam met --steam, of zelf als niet-Steam-game met Proton.)");
     Pause(interactive);
     return 0;
 }
@@ -247,6 +255,7 @@ sealed class Options
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
+    public readonly ShortcutOptions Shortcuts = new();
 
     public static Options Parse(string[] args)
     {
@@ -277,6 +286,12 @@ sealed class Options
                     if (!DgVoodoo.IsValidResolution(o.Resolution))
                         throw new PatchException($"--resolution: onbekende waarde '{o.Resolution}' (bijv. max, 2x, desktop, 1920x1080 of unforced).");
                     break;
+                case "--shortcut": o.Shortcuts.Shortcut = true; break;
+                case "--no-shortcut": o.Shortcuts.Shortcut = false; break;
+                case "--steam": o.Shortcuts.Steam = true; break;
+                case "--no-steam": o.Shortcuts.Steam = false; break;
+                case "--steam-dir": o.Shortcuts.SteamDir = Next(); break;
+                case "--proton": o.Shortcuts.Proton = Next(); break;
                 case "--yes" or "-y": o.Yes = true; break;
                 case "--help" or "-h" or "/?": o.ShowHelp = true; break;
                 default: o.Disc = args[i]; break;
