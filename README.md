@@ -57,7 +57,7 @@ De executables komen in `dist/win-x64` en `dist/linux-x64`. Tests draaien met `d
 ### Release maken
 
 Bij elke push en pull request draait GitHub Actions de tests op Windows en Linux.
-Een release bouw je door een versietag te pushen. Zijn de tests geslaagd, dan publiceert de workflow de Windows-zip en de Linux-tar.gz als GitHub Release:
+Een release bouw je door een versietag te pushen. Zet eerst de wijzigingen onder een nieuwe kop `## [x.y.z]` in [CHANGELOG.md](CHANGELOG.md); die sectie worden de releasenotes. Zijn de tests geslaagd, dan publiceert de workflow de Windows-zip en de Linux-tar.gz als GitHub Release:
 
 ```
 git tag v0.1.0
