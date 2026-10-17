@@ -17,30 +17,40 @@ public sealed record BinaryPatch(string Id, string File, string Description, IRe
 
     public PatchResult Apply(string gameDir, ExeBuild build = ExeBuild.Original)
     {
-        var replacements = For(build);
         var path = Path.Combine(gameDir, File);
         if (!System.IO.File.Exists(path))
             throw new PatchException($"{File} niet gevonden in de spelmap.");
 
         var data = System.IO.File.ReadAllBytes(path);
-        int originalLength = data.Length;
+        var result = Apply(data, build);
+        if (result == PatchResult.Applied) System.IO.File.WriteAllBytes(path, data);
+        return result;
+    }
 
+    /// <summary>
+    /// Past de patch toe op de inhoud van <see cref="File"/> in het geheugen (bijv. een kopie uit de basis).
+    /// <paramref name="data"/> wordt alleen gewijzigd als alle vervangingen lukken.
+    /// </summary>
+    public PatchResult Apply(byte[] data, ExeBuild build = ExeBuild.Original)
+    {
+        var replacements = For(build);
         if (replacements.All(r => Count(data, r.Replace) == 1 && Count(data, r.Find) == 0))
             return PatchResult.AlreadyApplied;
 
+        var patched = data;
         foreach (var r in replacements)
         {
-            int count = Count(data, r.Find);
+            int count = Count(patched, r.Find);
             if (count != 1)
                 throw new PatchException($"Patch '{Id}': patroon {count}x gevonden in {File} (verwacht 1x).");
-            int at = IndexOf(data, r.Find, 0);
-            data = [.. data.AsSpan(0, at), .. r.Replace, .. data.AsSpan(at + r.Find.Length)];
+            int at = IndexOf(patched, r.Find, 0);
+            patched = [.. patched.AsSpan(0, at), .. r.Replace, .. patched.AsSpan(at + r.Find.Length)];
         }
 
-        if (data.Length != originalLength)
+        if (patched.Length != data.Length)
             throw new PatchException($"Patch '{Id}': bestandslengte van {File} zou veranderen; patch afgebroken.");
 
-        System.IO.File.WriteAllBytes(path, data);
+        patched.CopyTo(data, 0);
         return PatchResult.Applied;
     }
 

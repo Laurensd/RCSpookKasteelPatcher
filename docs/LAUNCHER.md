@@ -62,8 +62,10 @@ Per optie: welke bestanden en bytes, en wat er nodig is om het telkens opnieuw t
 Herhaalbaar: de binaire patches zijn per beeldverhouding verschillend. Van 16:9 naar 16:10 kan dus niet direct: eerst
 terug naar 4:3, dan de andere. Terugdraaien door `Find` en `Replace` om te wisselen kan alleen als het `Replace`-patroon
 in het ongepatchte bestand niet voorkomt; dat is niet gecontroleerd (bijv. `"856x480\0"` of de float `1/856`).
-`HUDIcon.ini` is nu **niet** idempotent: na een verschuiving is `X` nog steeds `>= 320`, dus een tweede keer toepassen
-schuift de iconen opnieuw op. Met een basis (zie hieronder) rekent de launcher altijd vanaf de originele `X`.
+De INI-kant is herhaalbaar en omkeerbaar: `Widescreen.ApplySettings(gameDir, target)` leest de huidige stand af aan
+`FieldOfView` (1,36, 1,819 of 1,632) en verschuift de iconen rechts vanaf hun originele `X` naar die van `target`
+(`null` = 4:3). Een `FieldOfView` die bij geen van de drie hoort, geeft een fout zonder iets te veranderen. Vóór deze
+wijziging schoof een tweede keer toepassen de iconen opnieuw op.
 
 ### `--wasd`
 
@@ -186,7 +188,9 @@ ze, dan:
 Zo is elke stap per definitie idempotent en terug te draaien, zonder omgekeerde patronen. Het kost een paar MB schijf (de XP-build van `RcHcGame.dat` is 4,4 MB)
 en een kleine aanpassing in de patcher (basis bewaren). `Patching/` moet daarvoor met byte-arrays kunnen werken in
 plaats van alleen met paden; nu leest en schrijft elke patch zelf het bestand (`BinaryPatch.Apply(gameDir, …)`,
-`Controller.PatchTable(path, …)`). Een overload `Apply(byte[] data, ExeBuild)` is genoeg; de padversie roept die aan.
+`Controller.PatchTable(path, …)`). Daarvoor zijn er nu `BinaryPatch.Apply(byte[] data, ExeBuild)` en
+`Controller.PatchTable(byte[] data, mapping)`: ze patchen in het geheugen (de data verandert alleen als alles lukt) en de
+padversies roepen ze aan.
 
 Voorwaarden: het spel mag niet draaien tijdens het opbouwen (op Windows zit `RcHcGame.dat` dan op slot; de launcher
 controleert dat en meldt het). Een installatie zonder basis (gepatcht met een oudere patcher) kan de launcher niet
@@ -276,10 +280,9 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 
 ## Aanbevolen volgorde
 
-1. **`HUDIcon.ini` idempotent maken** in de patcher (rekenen vanaf de originele waarden). Klein, en nodig voor elke
-   vorm van opnieuw toepassen.
-2. **`Patching/` op byte-arrays** laten werken (`Apply(byte[] data, ExeBuild)` naast de padversie), met tests die
-   basis → alle combinaties van opties opbouwen en vergelijken met de huidige uitvoer van de patcher.
+1. ~~**`HUDIcon.ini` idempotent maken**~~ (gedaan: breedbeeld-INI's zijn herhaalbaar en omkeerbaar).
+2. **`Patching/` op byte-arrays**: `BinaryPatch.Apply(byte[], ExeBuild)` en `Controller.PatchTable(byte[], …)` zijn er.
+   Nog te doen: één functie die basis + keuze → de drie bestanden opbouwt, met tests over alle combinaties van opties.
 3. **De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**; `BackupUserData` neemt het keuzebestand mee.
    Bestaande opties blijven werken.
 4. **Proef: GUI-framework onder Proton** en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
