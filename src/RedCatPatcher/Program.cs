@@ -42,6 +42,9 @@ if (options.ShowHelp)
           --start-level <1-5>        Niet patchen, maar het al gepatchte spel (in --out) direct in dit level starten,
                                      met een testspeler: 1 Het Bos, 2 Het Kasteel, 3 Het Kerkhof, 4 De Grotten, 5 De Toren
 
+        De keuze voor breedbeeld, besturing, beeld en logs komt in RedCatLauncher.ini in de spelmap. Zonder een van
+        die opties gebruikt de patcher bij opnieuw patchen de keuze die daar al staat.
+
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
         Ondersteund: versie 1.0.0 van de cd-rom, met of zonder de officiële Win98- en XP-update.
         """);
@@ -74,6 +77,13 @@ try
         ? options.Updates.Select(u => (Exe: Path.GetFullPath(u), Update: OfficialUpdate.Identify(u))).ToList()
         : FindUpdates();
     var outDir = Path.GetFullPath(options.Out ?? Path.Combine(AppContext.BaseDirectory, GameFolderName));
+    var choice = options.Choice;
+    if (!options.ChoiceGiven && LauncherIni.Read(outDir)?.Wanted is { } kept)
+    {
+        choice = kept;
+        Console.WriteLine($"Keuze uit {LauncherIni.FileName}: {Describe(choice)}");
+        Console.WriteLine();
+    }
 
     if (Directory.Exists(outDir) && Directory.EnumerateFileSystemEntries(outDir).Any())
     {
@@ -127,56 +137,42 @@ try
     Console.WriteLine();
     Console.WriteLine($"Versie: {version.Name}");
 
-    // 4. Spelbestanden patchen
+    // 4. Basis bewaren (de bestanden vóór de fixes), zodat de launcher later een andere keuze kan opbouwen
+    var basisSha256 = Basis.Save(outDir);
+
+    // 5. Fixes en opties, opgebouwd uit de basis (dezelfde code als de launcher)
+    Basis.Apply(outDir, choice);
     Console.WriteLine();
     Console.WriteLine("Fixes:");
-    foreach (var patch in GamePatches.All)
-    {
-        var result = patch.Apply(outDir, version.Build);
-        Console.WriteLine($"  [{(result == PatchResult.Applied ? "ok" : "al toegepast")}] {patch.Description}");
-    }
-    if (!options.DebugLogs)
-        foreach (var patch in DebugLogs.PatchesFor(version))
-        {
-            var result = patch.Apply(outDir, version.Build);
-            Console.WriteLine($"  [{(result == PatchResult.Applied ? "ok" : "al toegepast")}] {patch.Description}");
-        }
+    foreach (var patch in GamePatches.All.Concat(choice.DebugLogs ? [] : DebugLogs.PatchesFor(version)))
+        Console.WriteLine($"  [ok] {patch.Description}");
 
-    // 5. Opties
-    if (options.Widescreen != null || options.Wasd || options.Controller)
+    if (choice.Widescreen != null || choice.Wasd || choice.Controller)
     {
         Console.WriteLine();
         Console.WriteLine("Opties:");
     }
-    if (options.Widescreen is { } wide)
-    {
-        foreach (var patch in wide.Patches)
-            patch.Apply(outDir, version.Build);
-        wide.ApplySettings(outDir);
+    if (choice.Widescreen is { } wide)
         Console.WriteLine($"  [ok] Breedbeeld {wide.Name} ({wide.Width}x{wide.Height}, FOV {wide.FieldOfView:0.00}, HUD aangepast)");
-    }
-    if (options.Wasd)
-    {
-        ModernControls.Apply(outDir);
+    if (choice.Wasd)
         Console.WriteLine($"  [ok] {ModernControls.Description}");
-    }
-    if (options.Controller || options.Wasd)
-    {
-        // Zonder --controller alleen de stick naar WASD, anders bestuurt de stick met --wasd niets meer.
-        Controller.Apply(outDir, options.Wasd, buttons: options.Controller);
-        Console.WriteLine($"  [ok] {(options.Controller ? Controller.Description : "Joystick-stick volgt WASD")}");
-    }
+    // Zonder --controller alleen de stick naar WASD, anders bestuurt de stick met --wasd niets meer.
+    if (choice.Controller || choice.Wasd)
+        Console.WriteLine($"  [ok] {(choice.Controller ? Controller.Description : "Joystick-stick volgt WASD")}");
 
     // 6. dgVoodoo2
     if (!options.NoDgVoodoo)
     {
         Console.WriteLine();
         var zip = await DgVoodoo.GetZipAsync(options.DgVoodooZip, msg => Console.WriteLine(msg));
-        var display = options.Display;
+        var display = choice.Display;
         DgVoodoo.Install(zip, outDir, display);
-        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, {display.Mode switch { DisplayMode.Window => "venster", DisplayMode.Fullscreen => "volledig scherm", _ => "schermvullend" }} {options.Widescreen?.Name ?? "4:3"}, renderresolutie {display.GlideResolution})");
+        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, {display.Mode switch { DisplayMode.Window => "venster", DisplayMode.Fullscreen => "volledig scherm", _ => "schermvullend" }} {choice.Widescreen?.Name ?? "4:3"}, renderresolutie {display.GlideResolution})");
         Console.WriteLine($"       MSAA {display.Antialiasing}, vsync {(display.VSync ? "aan" : "uit")}, fps-limiet {(display.FpsLimit == 0 ? "geen" : display.FpsLimit)}{(display.Crt ? ", CRT-effect" : "")}");
     }
+
+    // Keuzebestand voor de launcher: gewenst = toegepast
+    new LauncherIni(choice, choice, basisSha256).Write(outDir);
 
     // 7. Snelkoppelingen en Steam (vraagt interactief j/N als er geen optie is opgegeven)
     Shortcuts.Run(outDir, options.Shortcuts, interactive, Ask);
@@ -257,7 +253,7 @@ static Dictionary<string, byte[]> BackupUserData(string dir)
     if (!Directory.Exists(dir)) return keep;
     foreach (var f in Directory.EnumerateFiles(dir, "SaveGame*.RCR"))
         keep[Path.GetFileName(f)] = File.ReadAllBytes(f);
-    foreach (var rel in new[] { Path.Combine("settings", "menu.ini") })
+    foreach (var rel in new[] { Path.Combine("settings", "menu.ini"), LauncherIni.FileName })
         if (File.Exists(Path.Combine(dir, rel))) keep[rel] = File.ReadAllBytes(Path.Combine(dir, rel));
     return keep;
 }
@@ -266,6 +262,20 @@ static void RestoreUserData(string dir, Dictionary<string, byte[]> keep)
 {
     foreach (var (rel, bytes) in keep) File.WriteAllBytes(Path.Combine(dir, rel), bytes);
 }
+
+static string Describe(Choice c) => string.Join(", ", new[]
+{
+    c.Widescreen?.Name ?? "4:3",
+    c.Wasd ? "WASD" : "pijltjestoetsen",
+    c.Controller ? "controller" : null,
+    c.DebugLogs ? "logbestanden aan" : null,
+    c.Display.Mode.ToString().ToLowerInvariant(),
+    $"renderresolutie {c.Display.GlideResolution}",
+    $"MSAA {c.Display.Antialiasing}",
+    c.Display.VSync ? null : "vsync uit",
+    c.Display.FpsLimit > 0 ? $"fps-limiet {c.Display.FpsLimit}" : null,
+    c.Display.Crt ? "CRT-effect" : null,
+}.Where(s => s != null));
 
 static bool Ask(string question)
 {
@@ -287,10 +297,17 @@ sealed class Options
     public string? Disc, Out, DgVoodooZip;
     public DisplayOptions Display = new();
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller, DebugLogs;
+    /// <summary>Minstens één optie uit <see cref="Choice"/> staat op de opdrachtregel.</summary>
+    public bool ChoiceGiven;
     public int? StartLevel;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
     public readonly ShortcutOptions Shortcuts = new();
+
+    public Choice Choice => new() { Widescreen = Widescreen, Wasd = Wasd, Controller = Controller, DebugLogs = DebugLogs, Display = Display };
+
+    private static readonly HashSet<string> ChoiceOptions =
+        ["--widescreen", "--wasd", "--controller", "--debug-logs", "--resolution", "--display", "--fps-limit", "--no-vsync", "--msaa", "--crt"];
 
     public static Options Parse(string[] args)
     {
@@ -298,6 +315,7 @@ sealed class Options
         for (int i = 0; i < args.Length; i++)
         {
             string Next() => i + 1 < args.Length ? args[++i] : throw new PatchException($"{args[i]} verwacht een waarde.");
+            o.ChoiceGiven |= ChoiceOptions.Contains(args[i]);
             switch (args[i])
             {
                 case "--out": o.Out = Next(); break;

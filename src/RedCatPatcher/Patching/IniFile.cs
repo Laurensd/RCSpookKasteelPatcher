@@ -37,6 +37,30 @@ public static class IniFile
     }
 
     /// <summary>
+    /// Alle secties met hun sleutels (hoofdletterongevoelig). Bij dubbele secties of sleutels telt de eerste, net als
+    /// bij Windows. Een ontbrekend bestand geeft een lege lijst.
+    /// </summary>
+    public static Dictionary<string, Dictionary<string, string>> ReadAll(string path)
+    {
+        var sections = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        if (!File.Exists(path)) return sections;
+        Dictionary<string, string>? current = null;
+        foreach (var line in File.ReadLines(path, Encoding.Latin1))
+        {
+            var header = Regex.Match(line, @"^\s*\[([^\]]*)\]");
+            if (header.Success)
+            {
+                var name = header.Groups[1].Value.Trim();
+                current = sections.ContainsKey(name) ? null : sections[name] = new(StringComparer.OrdinalIgnoreCase);
+                continue;
+            }
+            var entry = Regex.Match(line, @"^\s*([^;=\s][^=]*?)\s*=([^;]*)");
+            if (current != null && entry.Success) current.TryAdd(entry.Groups[1].Value, entry.Groups[2].Value.Trim());
+        }
+        return sections;
+    }
+
+    /// <summary>
     /// Past <paramref name="key"/> aan in elke sectie waarvan de naam aan <paramref name="sectionFilter"/> voldoet.
     /// <paramref name="change"/> krijgt de huidige waarde en geeft de nieuwe terug.
     /// </summary>

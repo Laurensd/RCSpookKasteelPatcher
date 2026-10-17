@@ -315,10 +315,12 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 ## Aanbevolen volgorde
 
 1. ~~**`HUDIcon.ini` idempotent maken**~~ (gedaan: breedbeeld-INI's zijn herhaalbaar en omkeerbaar).
-2. **`Patching/` op byte-arrays**: `BinaryPatch.Apply(byte[], ExeBuild)` en `Controller.PatchTable(byte[], …)` zijn er.
-   Nog te doen: één functie die basis + keuze → de drie bestanden opbouwt, met tests over alle combinaties van opties.
-3. **De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**; `BackupUserData` neemt het keuzebestand mee.
-   Bestaande opties blijven werken.
+2. ~~**`Patching/` op byte-arrays**~~ (gedaan): `Basis.Build` bouwt basis + keuze (`Choice`) in het geheugen op tot
+   de drie bestanden, `Basis.Apply` schrijft ze en zet de INI-sleutels en `dgVoodoo.conf`. Tests over alle combinaties
+   (`BasisTests`): elke keuze vanaf elke vorige keuze geeft dezelfde bestanden als een verse installatie.
+3. ~~**De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**~~ (gedaan). De patcher gebruikt zelf ook
+   `Basis.Apply`; de bestanden zijn byte voor byte gelijk aan die van v0.2.0. Zonder keuze-opties op de opdrachtregel
+   neemt opnieuw patchen de `[Keuze]` uit `RedCatLauncher.ini` over.
 4. ~~**Proef: GUI-framework onder Proton**~~ en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
    Gedaan: Avalonia (zie "Proef GUI-framework").
 5. **Launcher, tabblad Spelen**: groep 2 (breedbeeld, besturing, controller, beeld, logs) via "opbouwen uit de basis",
