@@ -14,6 +14,9 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 - Disc-controle: de patcher hasht de disc-image (SHA-1, met voortgang) en meldt `Disc herkend: v1.0.0` bij een bekende dump, als `.cue`/`.bin` én als `.iso`. Bij een onbekende rip controleert hij de spelbestanden die hij nodig heeft; ontbreken die, wijken ze af of is de image onvolledig, dan volgt meteen een duidelijke waarschuwing (en interactief de vraag of je toch wilt doorgaan) in plaats van een vage fout halverwege.
 - Scherper beeld: dgVoodoo2 rendert het spel standaard op schermresolutie (`[Glide] Resolution = max`) in plaats van 640x480 op te rekken. Aan te passen met `--resolution` (bijv. `2x`, `1920x1080`, of `unforced` voor het origineel).
 
+- Snelkoppelingen na het patchen (de patcher vraagt het, of gebruik `--shortcut`): op het bureaublad en in het Startmenu (Windows) of in het programmamenu (Linux).
+- Optie `--steam`: RedCat toevoegen aan Steam als niet-Steam-game, voor alle Steam-gebruikers op de computer. Op Linux en de Steam Deck stelt de patcher meteen Proton in (`--proton` om een andere versie te kiezen). Van `shortcuts.vdf` en `config.vdf` wordt eerst een backup gemaakt.
+
 ### Opgelost
 - Met `--wasd` bestuurde de joystick-stick niets meer (die stuurde de pijltjestoetsen); de stick volgt nu W/A/S/D.
 - In venstermodus (alt-enter of `FullScreenMode = false`) stond het spelvenster te hoog, met de titelbalk op een monitor erboven of buiten beeld. dgVoodoo2 centreert het venster nu op het hoofdscherm (`CenterAppWindow = true`).

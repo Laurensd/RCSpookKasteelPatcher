@@ -15,13 +15,15 @@ installeert dgVoodoo2. Daarna start je het spel met `RedCat.exe`, zonder install
    RedCatDisc\RedCat.bin
    ```
 2. Dubbelklik op `RedCatPatcher.exe`. De patcher zoekt de disc zelf; anders kun je het `.cue`-bestand in het venster slepen.
-3. Start `RedCat Spookkasteel\RedCat.exe`.
+3. Kies of de patcher een snelkoppeling op het bureaublad en in het Startmenu maakt, en of hij RedCat aan Steam toevoegt.
+4. Start `RedCat Spookkasteel\RedCat.exe` (of via de snelkoppeling).
 
 Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--yes]
+              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>]
+              [--shortcut|--no-shortcut] [--steam|--no-steam] [--steam-dir <map>] [--proton <naam>] [--yes]
 ```
 
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
@@ -88,10 +90,30 @@ Sluit de controller aan vóór je het spel start. De d-pad, triggers en rechters
 met de controller: gebruik de muis, of op de Steam Deck de standaard Steam-indeling (rechtertrackpad = muis, R2 = klikken).
 Wie in het menu andere toetsen kiest voor lopen, schieten, springen of ontwijken, verliest die op de controller.
 
+### Snelkoppelingen en Steam
+
+Na het patchen vraagt de patcher (j/N) of hij snelkoppelingen maakt; met `--yes` gebeurt dat alleen als je de vlag meegeeft.
+
+| Vlag | Wat het doet |
+|---|---|
+| `--shortcut` | Windows: snelkoppeling op het bureaublad en in het Startmenu. Linux: `redcat-spookkasteel.desktop` in het programmamenu (start via Steam, of via Wine als RedCat niet in Steam staat) |
+| `--steam` | RedCat toevoegen aan Steam als niet-Steam-game, voor elke Steam-gebruiker op de computer. Op Linux zet de patcher er ook Proton bij als compatibiliteitstool |
+| `--proton <naam>` | Welke Proton (standaard `proton_experimental`), bijv. `proton_9` of `GE-Proton9-20` |
+| `--steam-dir <map>` | Steam-map, als de patcher Steam niet zelf vindt |
+| `--no-shortcut`, `--no-steam` | Niet vragen, overslaan |
+
+**Sluit Steam af voordat je `--steam` gebruikt**: Steam leest zijn lijst met games alleen bij het opstarten en schrijft zijn
+instellingen terug bij het afsluiten. De patcher vraagt erom als Steam nog draait. Van `shortcuts.vdf` en `config.vdf` maakt
+hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game in Steam bij in plaats van een tweede toe te voegen.
+
 ### Linux / Steam Deck
 
-- Draai de Linux-versie van de patcher (`RedCatPatcher`), of de Windows-versie via Proton.
-- Voeg `RedCat Spookkasteel/RedCat.exe` in Steam toe als niet-Steam-game en kies bij Compatibiliteit een Proton-versie.
+- Draai de Linux-versie van de patcher (`RedCatPatcher`), of de Windows-versie via Proton. Op de Steam Deck in de bureaubladmodus.
+- Met `--steam` staat RedCat daarna in je Steam-bibliotheek, met Proton ingesteld (ook in de gamemodus):
+  ```
+  ./RedCatPatcher --widescreen 16:10 --steam
+  ```
+- Liever zelf? Voeg `RedCat Spookkasteel/RedCat.exe` in Steam toe als niet-Steam-game en kies bij Compatibiliteit een Proton-versie.
 
 ## Wat er wordt opgelost
 

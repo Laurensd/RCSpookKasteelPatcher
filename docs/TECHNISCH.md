@@ -280,6 +280,55 @@ hebben.
 | 1/640 (HUD) | `0x64D398` | `0x76FC0C` |
 | Ongebruikte kopie van 1/480 | `0x64EB38` | `0x771A40` (direct na 255.0f; geen verwijzingen) |
 
+## Snelkoppelingen en Steam
+
+Code in `Install/` en `Steam/`; los herbruikbaar (bijvoorbeeld voor een Steam Input-lay-out per game).
+
+### Windows-snelkoppeling (`Install/ShellLink.cs`)
+
+De patcher schrijft het `.lnk`-bestand zelf (MS-SHLLINK), want `IShellLink` via COM werkt niet in een getrimde
+single-file build. Het bestand bestaat uit de header, de IDList van `RedCat.exe`, een LinkInfo-blok (lokaal pad, ANSI en
+Unicode) en de strings voor omschrijving, werkmap en pictogram (`RedCat.exe,0`). De IDList is nodig: zonder IDList
+negeert Verkenner het doel, ook als LinkInfo klopt. Die IDList komt van `SHParseDisplayName` (gewone P/Invoke naar
+`shell32`), dus precies wat de shell zelf zou opslaan.
+
+### Steam: `shortcuts.vdf`
+
+Niet-Steam-games staan per account in `userdata/<account-id>/config/shortcuts.vdf`, een binair KeyValues-bestand
+(`Steam/BinaryVdf.cs`): elk veld is een typebyte, een naam met nul-terminator en de waarde. `0x00` = map, `0x01` = string,
+`0x02` = int32, `0x03` = float, `0x07` = uint64, `0x08` = einde van de map. Het bestand zelf is een naamloze map met daarin
+`shortcuts` → `0`, `1`, … Lezen en schrijven behoudt volgorde en typen, dus andere games blijven byte voor byte gelijk.
+
+Per game: `appid` (int32), `AppName`, `Exe` en `StartDir` (allebei tussen aanhalingstekens), `icon`, `LaunchOptions`,
+`IsHidden`, `AllowOverlay`, `LastPlayTime`, `tags`, enz. De **appid** is wat Steam zelf berekent:
+
+```
+appid  = CRC32('"' + exe + '"' + AppName) | 0x80000000
+gameid = (appid << 32) | 0x02000000      (voor steam://rungameid/)
+```
+
+Dezelfde appid gebruikt Steam voor de Proton-keuze, plaatjes (`config/grid/<appid>p.png`) en controllerconfiguraties.
+Staat RedCat al in de lijst (zelfde exe of zelfde appid), dan werkt de patcher die regel bij en houdt hij de bestaande appid,
+speeltijd en tags. Accounts komen uit de mappen in `userdata` (behalve `0`); de namen uit `config/loginusers.vdf`
+(SteamID64 = account-id + 76561197960265728).
+
+### Steam: Proton (`config/config.vdf`)
+
+Op Linux zet de patcher de compatibiliteitstool in de tekst-VDF `config/config.vdf` van de Steam-installatie:
+
+```
+"InstallConfigStore" { "Software" { "Valve" { "Steam" { "CompatToolMapping" {
+    "<appid>" { "name" "proton_experimental"  "config" ""  "priority" "250" } } } } } }
+```
+
+`Steam/TextVdf.cs` bewaart strings ruw (met escapes), zodat de rest van het bestand ongewijzigd terugkomt. Steam leest beide
+bestanden bij het opstarten en schrijft `config.vdf` terug bij het afsluiten; daarom moet Steam dicht zijn. Steam wordt
+gezocht via het register (`HKCU\Software\Valve\Steam\SteamPath`) op Windows en in `~/.steam/steam`, `~/.local/share/Steam`
+en Flatpak (`~/.var/app/com.valvesoftware.Steam/…`) op Linux.
+
+De Linux-`.desktop` start het spel via `steam steam://rungameid/<gameid>` (Flatpak: `flatpak run com.valvesoftware.Steam …`),
+dus met dezelfde Proton-instellingen als in Steam.
+
 ## Testen zonder menu
 
 `RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).
