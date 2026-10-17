@@ -444,6 +444,32 @@ en Flatpak (`~/.var/app/com.valvesoftware.Steam/…`) op Linux.
 De Linux-`.desktop` start het spel via `steam steam://rungameid/<gameid>` (Flatpak: `flatpak run com.valvesoftware.Steam …`),
 dus met dezelfde Proton-instellingen als in Steam.
 
+## Direct naar een level
+
+Het menu geeft zijn keuze aan het spel door via `settings\Game.ini [Run]` (`PlayerNumber`, `StartLevelNumber`,
+`StartSubLevelNumber`, `StartSubSubLevelNumber`, `Replay`) en start dan `RcHcGame.dat -game`. Het spel heeft één level
+(`[level1]`) met vijf sublevels, de Griezelplekken van het menu:
+
+| Nr | Griezelplek | Kaart |
+|---|---|---|
+| 1 | Het Bos | `lvl00a.bsp` |
+| 2 | Het Kasteel | `lvl01a.bsp` |
+| 3 | Het Kerkhof | `lvl02a.bsp` |
+| 4 | De Grotten | `lvl03a.bsp` |
+| 5 | De Toren | `lvl04a.bsp` |
+
+`--start-level` (`Patching/StartLevel.cs`) schrijft `[Run]` met `StartSubLevelNumber` = het gekozen nummer en
+speler 10, kopieert `PlayerDef.ini` naar `Player10.ini` en start het spel. Het menu schrijft `[Run]` en de
+`Player%d.ini` vóór elk spel opnieuw, dus via `RedCat.exe` speel je daarna gewoon verder. Voortgang per speler staat in
+`Player%d.ini` (`[Level1] CurrentSubLevel`, `[SubLevel1_N] Completed`).
+
+Bekende crash: het opblazen van de muur in level 4 (De Grotten). De XP-update lost die op volgens de
+[uploader op het Internet Archive](https://archive.org/details/redcatspookkasteelupdate); niet getest of 1.0.0/1.0.1 onder
+moderne Windows nog crasht.
+
+Daarnaast kent `RcHcGame.dat` `-map <naam>` (kaart uit `Levels`, zonder `.bsp`) en `-file <pad>`; die laden een kaart als
+"ad-hoc level" buiten de levelstructuur (`Game.ini [ad-hoc sublevel]`).
+
 ## Testen zonder menu
 
 `RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).

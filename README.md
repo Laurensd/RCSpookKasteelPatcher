@@ -25,6 +25,7 @@ RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgv
               [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--display <modus>]
               [--fps-limit <n>] [--no-vsync] [--msaa <off|2x|4x|8x|16x>] [--crt] [--debug-logs]
               [--shortcut|--no-shortcut] [--steam|--no-steam] [--steam-dir <map>] [--proton <naam>] [--yes]
+RedCatPatcher --start-level <1-5> [--out <map>]
 ```
 
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
@@ -113,6 +114,14 @@ Na het patchen vraagt de patcher (j/N) of hij snelkoppelingen maakt; met `--yes`
 **Sluit Steam af voordat je `--steam` gebruikt**: Steam leest zijn lijst met games alleen bij het opstarten en schrijft zijn
 instellingen terug bij het afsluiten. De patcher vraagt erom als Steam nog draait. Van `shortcuts.vdf` en `config.vdf` maakt
 hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game in Steam bij in plaats van een tweede toe te voegen.
+
+### Direct naar een level (testen)
+
+`RedCatPatcher.exe --start-level 4` patcht niets, maar start het al gepatchte spel direct in een Griezelplek:
+1 Het Bos, 2 Het Kasteel, 3 Het Kerkhof, 4 De Grotten, 5 De Toren. Handig om bijvoorbeeld de bekende crash bij het
+opblazen van de muur van kratten in level 4 te testen, die de XP-update oplost. Het spel speelt met een aparte testspeler
+(speler 10, volle gezondheid en 3 levens), dus de voortgang van je eigen spelers blijft onaangeroerd. Onder Linux zet
+de patcher het level klaar en start je `RcHcGame.dat -game` zelf via Proton/Wine.
 
 ### Linux / Steam Deck
 

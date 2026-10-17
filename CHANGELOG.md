@@ -6,6 +6,7 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 ## [Unreleased]
 
 ### Toegevoegd
+- Optie `--start-level <1-5>`: start het gepatchte spel direct in een gekozen Griezelplek met een testspeler, zonder menu. Om bijvoorbeeld de crash bij de muur van kratten in level 4 (De Grotten) te testen.
 - Optie `--widescreen [16:9|16:10]`: breedbeeld (856×480 of 640×400) met een breder blikveld en een HUD dat niet wordt uitgerekt. Standaard 16:9.
 - Optie `--wasd`: W/A/S/D als standaardbesturing in plaats van de pijltjestoetsen, voor nieuwe spelers en via de knop Standaard bij Instellingen.
 - Optie `--controller`: logische gamepad-indeling in het spel (A springen, B ontwijken, X schieten, LB/RB wapen wisselen, Back scores, Start menu), via de joystickcode die de engine zelf al had. Werkt ook met een Xbox-controller en op de Steam Deck; het menu blijft muis/toetsenbord.
