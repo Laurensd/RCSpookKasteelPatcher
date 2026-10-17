@@ -15,6 +15,12 @@ public sealed class DiscImage : IDisposable
     public string DataFile { get; }
     public string Description { get; }
 
+    /// <summary>Bytes per sector in het databestand: 2048 (.iso), 2336 of 2352 (raw .bin).</summary>
+    public int SectorSize => _sectorSize;
+
+    /// <summary>Aantal (volledige) sectoren in het databestand.</summary>
+    public long SectorCount => _stream.Length / _sectorSize;
+
     private DiscImage(string dataFile, int sectorSize, int dataOffset, string description)
     {
         DataFile = dataFile;
@@ -70,13 +76,15 @@ public sealed class DiscImage : IDisposable
     {
         _stream.Position = lba * _sectorSize;
         _stream.ReadExactly(_raw);
-        int offset = _defaultDataOffset;
-        if (_sectorSize == 2352)
-        {
-            // Mode-byte in de sectorheader bepaalt waar de data staat (Mode 1: 16, Mode 2 Form 1: 24).
-            offset = _raw[15] == 1 ? 16 : 24;
-        }
-        _raw.AsSpan(offset, SectorDataSize).CopyTo(destination);
+        _raw.AsSpan(UserDataOffset(_raw), SectorDataSize).CopyTo(destination);
+    }
+
+    /// <summary>Waar de 2048 bytes gebruikersdata staan in een sector zoals die in het databestand staat.</summary>
+    public int UserDataOffset(ReadOnlySpan<byte> sector)
+    {
+        // Mode-byte in de sectorheader bepaalt waar de data staat (Mode 1: 16, Mode 2 Form 1: 24).
+        if (_sectorSize == 2352) return sector[15] == 1 ? 16 : 24;
+        return _defaultDataOffset;
     }
 
     public byte[] ReadSectors(long lba, int count)

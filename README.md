@@ -27,6 +27,14 @@ RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgv
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
 [dgVoodoo2 v2.87.5](https://github.com/dege-diosg/dgVoodoo2/releases/tag/v2.87.5).
 
+### Disc-controle
+
+Voor het kopiëren controleert de patcher de disc-image (een paar seconden, met voortgang). Een bekende dump geeft
+`Disc herkend: v1.0.0`; een `.iso` van dezelfde cd wordt net zo goed herkend als de `.cue`/`.bin`. Een andere rip
+is geen fout: kloppen de bestanden die de patcher aanpast, dan gaat hij gewoon door. Ontbreken die of wijken ze af, of is
+de image onvolledig, dan krijg je meteen een waarschuwing en (zonder `--yes`) de vraag of je toch wilt doorgaan.
+Maak in dat geval de image opnieuw.
+
 ### Officiële updates
 
 Davilex bracht twee updates uit: de **Win98-update** (versie 1.0.1, juni 2001: spelbalans, nieuwe geluiden, bijgewerkte

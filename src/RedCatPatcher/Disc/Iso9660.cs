@@ -15,6 +15,9 @@ public sealed class Iso9660
     public IsoEntry Root { get; }
     public string VolumeLabel { get; }
 
+    /// <summary>Grootte van het volume in sectoren volgens de volume descriptor (0 als die het niet vermeldt).</summary>
+    public uint VolumeSectors { get; }
+
     public Iso9660(DiscImage disc)
     {
         _disc = disc;
@@ -35,6 +38,7 @@ public sealed class Iso9660
         var descriptor = joliet ?? primary ?? throw new PatchException("Geen primary volume descriptor gevonden.");
         _joliet = joliet != null;
         VolumeLabel = (primary != null ? Encoding.ASCII.GetString(primary, 40, 32) : "").Trim();
+        VolumeSectors = BitConverter.ToUInt32(primary ?? descriptor, 80);
         Root = ReadDirectory("", descriptor.AsSpan(156, 34).ToArray(), depth: 0);
     }
 
@@ -108,6 +112,11 @@ public sealed class Iso9660
     public void ExtractFile(IsoEntry file, string target)
     {
         using var output = new FileStream(target, FileMode.Create, FileAccess.Write);
+        CopyFile(file, output);
+    }
+
+    public void CopyFile(IsoEntry file, Stream output)
+    {
         var sector = new byte[DiscImage.SectorDataSize];
         long remaining = file.Size;
         for (long lba = file.Lba; remaining > 0; lba++)
