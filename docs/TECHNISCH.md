@@ -160,6 +160,78 @@ zet in `PlayerDef.ini` dezelfde toetsen voor `MoveForward`, `MoveBack`, `TurnLef
 voor zijwaarts. Schieten (Ctrl), springen (Spatie) en ontwijken (Alt) blijven hetzelfde. Bestaande spelers met eigen toetsen
 houden die; het menu bewaart ze per speler.
 
+## Optie `--controller`
+
+### Onderzoek: de engine kan zelf al joysticks lezen
+
+`RcHcGame.dat` importeert `joyGetDevCapsA` en `joyGetPosEx` uit `WINMM.dll` en bevat `DaviJoystick.cpp` met
+debugregels als `*-JS Active Joystick found : %d`. `UseDirectInput` in `AdamWin.ini` heeft daar niets mee te maken: dat
+schakelt alleen toetsenbord en muis over op DirectInput (`DaviDInput.cpp`). Hoe het werkt (adressen voor 1.0.0):
+
+- **Opstarten** (`0x5A5A00`): `joyGetPosEx` op joystick 0, anders 1, met `JOY_RETURNX | JOY_RETURNY | JOY_RETURNBUTTONS`
+  (`0x83`). De stand op dat moment is het midden; de dode zone is 10% daarvan. Een controller die later wordt
+  aangesloten, ziet het spel niet.
+- **Elk frame** (`0x5A6030` → `0x5A5DE0`): vier booleans voor de richtingen van de linkerstick en tien voor knop 1–10.
+  Geen POV (d-pad), geen Z (triggers), geen R/U (rechterstick).
+- **Tabel** (`0x5A5F30`): 14 aanroepen `push vk; push index; mov ecx,esi; call` koppelen elke richting/knop aan een
+  virtual-key-code: stick = pijltjestoetsen, knop 1–4 = Ctrl, Alt, Spatie, Enter, knop 5–10 = niets.
+- **Toetscontrole** (`0x543DC0`, gebruikt door alle acties uit `[KeyBinds]`): vóór `GetAsyncKeyState` kijkt de engine of
+  een joystickrichting of -knop met díe virtual-key-code is ingedrukt (`0x5A6080`).
+
+`ControlType` (Toetsenbord/Gamepad/Joystick) en `JoySensitivity` in het menu (`static.ini`, `Player<n>.ini [General]`)
+leest het spel niet; de joystick doet altijd mee. Een controller werkt dus zonder patch, maar alleen met de oude
+standaardtoetsen, met een onhandige indeling (A schiet, X springt, geen wapenwissel of menu) en niet meer met `--wasd`.
+
+### Gekozen route: de tabel van de engine aanpassen
+
+Van de drie routes is (a), de eigen joystickcode, het robuustst:
+
+- Geen extra DLL of proces. Windows levert een Xbox-controller (XInput) ook via winmm aan, met de DirectInput-nummering
+  (1 A, 2 B, 3 X, 4 Y, 5 LB, 6 RB, 7 Back, 8 Start, 9/10 sticks indrukken). Wine/Proton doen hetzelfde, en op de Steam
+  Deck biedt Steam Input de knoppen aan als zo'n virtuele Xbox-controller.
+- (b) Een XInput→toetsenbordlaag (proxy-DLL of hulpproces) kan meer (d-pad, triggers, rechterstick, het menu), maar is
+  een apart stuk native code dat moet meelopen met dgVoodoo2's DLL's en onder Proton apart getest moet worden. Dat past
+  beter in de geplande launcher; zie "Nog open".
+- (c) Een Steam Input-indeling werkt alleen via Steam en is per gebruiker en per snelkoppeling opgeslagen; meeleveren kan
+  niet zonder in Steams configuratie te schrijven. De standaardindeling van Steam voor niet-Steam-games (Gamepad,
+  rechtertrackpad als muis) volstaat bovendien met deze patch.
+
+De patcher herschrijft alleen de vk-bytes van die 14 `push`-instructies (`Patching/Controller.cs`). Hij zoekt de code aan
+de hand van de vaste structuur (14 keer `6A vk 6A index 8B CE E8 …`, met de indexen in deze volgorde), omdat de
+call-offset per build verschilt; de code is in 1.0.0, 1.0.1 en de XP-build verder identiek. `push imm8` is signed, dus
+alleen virtual-key-codes onder `0x80` kunnen (`[`/`]` zijn `0xDB`/`0xDD`). Daarom krijgen wapenwisselen F5/F6, die de
+patcher als extra toets naast `[`/`]` in `PlayerDef.ini [KeyBinds]` zet (meerdere toetsen per actie mag, net als
+`Jump=Space,RightMouse`).
+
+| Controller | Toets | Actie |
+|---|---|---|
+| Linkerstick | pijltjes (W/A/S/D met `--wasd`) | vooruit, achteruit, links/rechts draaien |
+| A | Spatie | springen |
+| B | Alt | ontwijken; met de stick zijwaarts |
+| X | Ctrl | schieten |
+| Y | Enter | |
+| LB / RB | F5 / F6 | vorig / volgend wapen |
+| Back | Tab | scores |
+| Start | Escape | menu |
+| Linkerstick indrukken | Delete | camera centreren |
+
+Met alleen `--wasd` past de patcher de stick ook aan (W/A/S/D) en laat hij de knoppen zoals ze waren; anders bestuurt
+de stick niets meer.
+
+### Beperkingen en nog open
+
+- **Menu** (`RcHcMenu.dat`, Delphi): leest geen joystick. Op Windows met muis of toetsenbord bedienen; op de Steam Deck
+  werkt de standaardindeling van Steam (rechtertrackpad = muis, R2 = klikken). Een stick-als-muis-laag voor Windows hoort
+  bij route (b).
+- Stick is aan/uit (het zijn toetsen), d-pad, triggers en rechterstick doen niets. Steam Input kan de d-pad op de
+  linkerstick leggen.
+- Sluit de controller aan vóór het starten en raak de stick niet aan tijdens het laden (midden wordt dan bepaald). Het spel
+  kijkt alleen naar joystick-ID 0 en 1; wordt een controller niet gezien, kies hem dan als voorkeursapparaat in
+  `joy.cpl` (Geavanceerd).
+- De knoppen volgen de standaardtoetsen. Wie in het menu vooruit/schieten/springen/ontwijken op een andere toets zet,
+  verliest die functie op de controller.
+- Niet getest met een echte controller (geen beschikbaar bij het bouwen); de werking volgt uit de disassembly hierboven.
+
 ## Officiële updates
 
 Davilex bracht twee updates uit als Wise-installer
