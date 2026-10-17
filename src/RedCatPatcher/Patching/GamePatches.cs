@@ -15,10 +15,14 @@ public static class GamePatches
         // het GLYPHMETRICS niet in. De engine plaatst de letter dan met ongeïnitialiseerde afmetingen
         // en schrijft buiten de font-bitmap: crash bij het laden van elk level.
         // Fix: in die aanroep (cbBuffer, lpvBuffer) = (0, NULL), zodat alleen de metrics worden opgevraagd.
+        // De XP-build heeft dezelfde code; alleen het adres van GetGlyphOutlineA in de importtabel verschilt.
         new("font-glyph-metrics", "RcHcGame.dat",
             "Crash bij laden level (lettertype-code, GetGlyphOutline)",
             [new(Hex("8b 54 24 50 50 68 00 80 00 00 51 56 52 57 ff 15 18 a0 64 00"),
-                 Hex("8b 54 24 50 6a 00 6a 00 90 90 51 56 52 57 ff 15 18 a0 64 00"))]),
+                 Hex("8b 54 24 50 6a 00 6a 00 90 90 51 56 52 57 ff 15 18 a0 64 00"))],
+            Xp2004:
+            [new(Hex("8b 54 24 50 50 68 00 80 00 00 51 56 52 57 ff 15 b8 34 8a 00"),
+                 Hex("8b 54 24 50 6a 00 6a 00 90 90 51 56 52 57 ff 15 b8 34 8a 00"))]),
 
         // Het menu probeert 800x600 in 24, 16, 15 en dan 32 bit. 24-bit bestaat niet meer, dus het wordt
         // 16-bit; Windows emuleert dat met de DWM8And16BitMitigation-shim. Fix: probeer eerst 32-bit.

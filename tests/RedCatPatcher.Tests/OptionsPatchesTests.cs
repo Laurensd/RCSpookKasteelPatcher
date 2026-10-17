@@ -6,7 +6,11 @@ namespace RedCatPatcher.Tests;
 /// <summary>Opt-in patches: --widescreen en --wasd.</summary>
 public class OptionsPatchesTests
 {
-    public static TheoryData<string> Aspects => new("16:9", "16:10");
+    public static TheoryData<string, ExeBuild> Aspects => new()
+    {
+        { "16:9", ExeBuild.Original }, { "16:10", ExeBuild.Original },
+        { "16:9", ExeBuild.Xp2004 }, { "16:10", ExeBuild.Xp2004 },
+    };
 
     [Theory]
     [InlineData("16:9", 856, 480, 856, 1.819f)]
@@ -24,7 +28,7 @@ public class OptionsPatchesTests
 
     [Theory]
     [MemberData(nameof(Aspects))]
-    public void WidescreenPatches_ApplyToSyntheticFiles_AndAreIdempotent(string aspect)
+    public void WidescreenPatches_ApplyToSyntheticFiles_AndAreIdempotent(string aspect, ExeBuild build)
     {
         var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;
         try
@@ -33,7 +37,7 @@ public class OptionsPatchesTests
             foreach (var file in patches.Select(p => p.File).Distinct())
             {
                 var content = new List<byte>(new byte[64]);
-                foreach (var r in patches.Where(p => p.File == file).SelectMany(p => p.Replacements))
+                foreach (var r in patches.Where(p => p.File == file).SelectMany(p => p.For(build)))
                 {
                     Assert.Equal(r.Find.Length, r.Replace.Length);
                     content.AddRange(r.Find);
@@ -42,8 +46,8 @@ public class OptionsPatchesTests
                 File.WriteAllBytes(Path.Combine(dir, file), content.ToArray());
             }
 
-            Assert.All(patches, p => Assert.Equal(PatchResult.Applied, p.Apply(dir)));
-            Assert.All(patches, p => Assert.Equal(PatchResult.AlreadyApplied, p.Apply(dir)));
+            Assert.All(patches, p => Assert.Equal(PatchResult.Applied, p.Apply(dir, build)));
+            Assert.All(patches, p => Assert.Equal(PatchResult.AlreadyApplied, p.Apply(dir, build)));
         }
         finally { Directory.Delete(dir, true); }
     }

@@ -65,6 +65,28 @@ public sealed class BinaryPatchTests : IDisposable
     }
 
     [Fact]
+    public void Apply_UsesXp2004Replacements_OnlyForThatBuild()
+    {
+        var patch = new BinaryPatch("test", "game.dat", "test", [new([1, 2], [3, 4])], Xp2004: [new([5, 6], [7, 8])]);
+
+        var path = WriteFile("game.dat", [0, 1, 2, 0]);
+        Assert.Equal(PatchResult.Applied, patch.Apply(_dir, ExeBuild.Original));
+        Assert.Equal(new byte[] { 0, 3, 4, 0 }, File.ReadAllBytes(path));
+
+        WriteFile("game.dat", [0, 5, 6, 0]);
+        Assert.Equal(PatchResult.Applied, patch.Apply(_dir, ExeBuild.Xp2004));
+        Assert.Equal(new byte[] { 0, 7, 8, 0 }, File.ReadAllBytes(path));
+    }
+
+    [Fact]
+    public void Apply_WithoutXp2004Replacements_UsesDefaultForEveryBuild()
+    {
+        var path = WriteFile("game.dat", [0, 1, 2, 0]);
+        Assert.Equal(PatchResult.Applied, Patch(([1, 2], [3, 4])).Apply(_dir, ExeBuild.Xp2004));
+        Assert.Equal(new byte[] { 0, 3, 4, 0 }, File.ReadAllBytes(path));
+    }
+
+    [Fact]
     public void Apply_MissingFile_Throws()
     {
         Assert.Throws<PatchException>(() => Patch(([1], [2])).Apply(_dir));

@@ -25,15 +25,32 @@ public static class DgVoodoo
         ["dgVoodooCpl.exe"] = "dgVoodooCpl.exe",
     };
 
-    // Aanpassingen op de standaard dgVoodoo.conf (sleutel -> waarde)
-    private static readonly (string Key, string Value)[] Settings =
+    /// <summary>
+    /// Standaard interne Glide-resolutie: de grootste resolutie met de beeldverhouding van het spel die op het
+    /// bureaublad past (1080p-scherm: 640x480 wordt 1440x1080). Het spel tekent dan direct op schermresolutie
+    /// in plaats van 640x480 op te schalen, dus scherper.
+    /// </summary>
+    public const string DefaultResolution = "max";
+
+    // Aanpassingen op de standaard dgVoodoo.conf (sectie, sleutel, waarde). Sectie is nodig omdat sommige
+    // sleutels (zoals Resolution) in meerdere secties voorkomen.
+    private static readonly (string Section, string Key, string Value)[] Settings =
     [
-        ("VRAM", "128"),                     // oude driver rekent >2 GB videogeheugen negatief
-        ("dgVoodooWatermark", "false"),
-        ("3DfxWatermark", "false"),
-        ("ScalingMode", "stretched_ar"),     // beeldvullend met behoud van 4:3
-        ("FullscreenAttributes", "fake"),    // randloos venster op schermgrootte (werkt goed met alt-tab en Proton)
+        ("DirectX", "VRAM", "128"),                   // oude driver rekent >2 GB videogeheugen negatief
+        ("DirectX", "dgVoodooWatermark", "false"),
+        ("Glide", "3DfxWatermark", "false"),
+        ("General", "ScalingMode", "stretched_ar"),   // beeldvullend met behoud van de beeldverhouding
+        ("General", "CenterAppWindow", "true"),       // venstermodus: spel zet zijn venster deels boven het hoofdscherm
+        ("GeneralExt", "FullscreenAttributes", "fake"), // randloos venster op schermgrootte (werkt goed met alt-tab en Proton)
     ];
+
+    /// <summary>
+    /// Controleert een waarde voor <c>--resolution</c>: een dgVoodoo-sleutelwoord ("unforced", "max", "desktop",
+    /// "2x", "max_2x", "max_isf", ...) of een vaste resolutie ("1920x1080", "1920x1080@60").
+    /// </summary>
+    public static bool IsValidResolution(string value) =>
+        Regex.IsMatch(value,
+            @"^(unforced|(max(_isf)?|max_fhd(_isf)?|max_qhd(_isf)?|desktop)(_[1-9]\d?x)?|[1-9]\d?x|\d{3,5}x\d{3,5}(@\d{2,3})?)$");
 
     public static async Task<byte[]> GetZipAsync(string? localZip, Action<string> log)
     {
@@ -56,7 +73,7 @@ public static class DgVoodoo
         return zip;
     }
 
-    public static void Install(byte[] zipBytes, string gameDir)
+    public static void Install(byte[] zipBytes, string gameDir, string glideResolution = DefaultResolution)
     {
         using var zip = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
         foreach (var (source, target) in Files)
@@ -67,14 +84,10 @@ public static class DgVoodoo
         }
 
         var confEntry = zip.GetEntry("dgVoodoo.conf") ?? throw new PatchException("dgVoodoo.conf ontbreekt in de zip.");
-        string conf;
-        using (var reader = new StreamReader(confEntry.Open())) conf = reader.ReadToEnd();
-        foreach (var (key, value) in Settings)
-        {
-            var re = new Regex($"^({Regex.Escape(key)}\\s*=)[^\\r\\n]*", RegexOptions.Multiline);
-            if (!re.IsMatch(conf)) throw new PatchException($"Instelling '{key}' niet gevonden in dgVoodoo.conf.");
-            conf = re.Replace(conf, $"$1 {value}");
-        }
-        File.WriteAllText(Path.Combine(gameDir, "dgVoodoo.conf"), conf);
+        var confPath = Path.Combine(gameDir, "dgVoodoo.conf");
+        confEntry.ExtractToFile(confPath, overwrite: true);
+        // Alleen [Glide] Resolution: het spel tekent via Glide. [DirectX] Resolution (menu's via DirectDraw) blijft unforced.
+        foreach (var (section, key, value) in Settings.Append(("Glide", "Resolution", glideResolution)))
+            IniFile.Update(confPath, s => s.Equals(section, StringComparison.OrdinalIgnoreCase), key, _ => " " + value, firstSectionOnly: true);
     }
 }

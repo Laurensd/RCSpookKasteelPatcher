@@ -1,6 +1,7 @@
 using RedCatPatcher;
 using RedCatPatcher.Disc;
 using RedCatPatcher.Patching;
+using RedCatPatcher.Updates;
 
 const string GameFolderName = "RedCat Spookkasteel";
 
@@ -15,13 +16,18 @@ if (options.ShowHelp)
         Gebruik: RedCatPatcher [disc.cue|disc.bin|disc.iso] [opties]
 
           --out <map>                Installatiemap (standaard: "RedCat Spookkasteel" naast de patcher)
+          --update <exe>             Officiële Davilex-update meenemen ("Redcat Spookkasteel 98 patch.exe" en/of
+                                     "...XP patch.exe"); mag vaker. Updates naast de patcher worden zelf gevonden
           --dgvoodoo-zip <zip>       Gebruik een lokaal gedownloade dgVoodoo2-zip (offline installeren)
           --no-dgvoodoo              dgVoodoo2 niet installeren
           --widescreen [16:9|16:10]  Breedbeeld in plaats van 4:3 (standaard 16:9)
           --wasd                     WASD als standaardbesturing in plaats van de pijltjestoetsen
+          --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
+                                     scherm toelaat). Bijv. 2x, 3x, desktop, 1920x1080, of unforced (origineel)
           --yes                      Niets vragen; bestaande installatiemap overschrijven
 
         Zonder disc-argument zoekt de patcher naar een .cue/.iso in zijn eigen map en submappen.
+        Ondersteund: versie 1.0.0 van de cd-rom, met of zonder de officiële Win98- en XP-update.
         """);
     return 0;
 }
@@ -33,6 +39,9 @@ try
     Console.WriteLine();
 
     var discPath = options.Disc ?? FindDisc(interactive);
+    var updates = options.Updates.Count > 0
+        ? options.Updates.Select(u => (Exe: Path.GetFullPath(u), Update: OfficialUpdate.Identify(u))).ToList()
+        : FindUpdates();
     var outDir = Path.GetFullPath(options.Out ?? Path.Combine(AppContext.BaseDirectory, GameFolderName));
 
     if (Directory.Exists(outDir) && Directory.EnumerateFileSystemEntries(outDir).Any())
@@ -62,16 +71,33 @@ try
         Console.WriteLine($"{(Console.IsOutputRedirected ? "" : "\r")}       {count} bestanden gekopieerd.          ");
     }
 
-    // 2. Spelbestanden patchen
+    // 2. Officiële updates van Davilex (in de volgorde waarin ze uitkwamen)
+    if (updates.Count > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Officiële updates:");
+        foreach (var (exe, update) in updates.DistinctBy(u => u.Update).OrderBy(u => u.Update.Order))
+        {
+            var changed = update.Apply(exe, outDir);
+            Console.WriteLine($"  [ok] {update.Name}: {changed.Count} {(changed.Count == 1 ? "bestand" : "bestanden")} ({Path.GetFileName(exe)})");
+        }
+    }
+
+    // 3. Versie bepalen; een onbekende versie wordt gemeld en niet gepatcht
+    var version = GameVersion.Detect(outDir);
+    Console.WriteLine();
+    Console.WriteLine($"Versie: {version.Name}");
+
+    // 4. Spelbestanden patchen
     Console.WriteLine();
     Console.WriteLine("Fixes:");
     foreach (var patch in GamePatches.All)
     {
-        var result = patch.Apply(outDir);
+        var result = patch.Apply(outDir, version.Build);
         Console.WriteLine($"  [{(result == PatchResult.Applied ? "ok" : "al toegepast")}] {patch.Description}");
     }
 
-    // 3. Opties
+    // 5. Opties
     if (options.Widescreen != null || options.Wasd)
     {
         Console.WriteLine();
@@ -80,7 +106,7 @@ try
     if (options.Widescreen is { } wide)
     {
         foreach (var patch in wide.Patches)
-            patch.Apply(outDir);
+            patch.Apply(outDir, version.Build);
         wide.ApplySettings(outDir);
         Console.WriteLine($"  [ok] Breedbeeld {wide.Name} ({wide.Width}x{wide.Height}, FOV {wide.FieldOfView:0.00}, HUD aangepast)");
     }
@@ -90,13 +116,13 @@ try
         Console.WriteLine($"  [ok] {ModernControls.Description}");
     }
 
-    // 4. dgVoodoo2
+    // 6. dgVoodoo2
     if (!options.NoDgVoodoo)
     {
         Console.WriteLine();
         var zip = await DgVoodoo.GetZipAsync(options.DgVoodooZip, msg => Console.WriteLine(msg));
-        DgVoodoo.Install(zip, outDir);
-        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"})");
+        DgVoodoo.Install(zip, outDir, options.Resolution);
+        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"}, renderresolutie {options.Resolution})");
     }
 
     Console.WriteLine();
@@ -140,6 +166,20 @@ static string FindDisc(bool interactive)
     var path = Console.ReadLine()?.Trim().Trim('"', '\'') ?? "";
     if (!File.Exists(path)) throw new PatchException($"Bestand niet gevonden: {path}");
     return path;
+}
+
+// Officiële updates naast de patcher (of in een submap) worden vanzelf meegenomen.
+static List<(string Exe, OfficialUpdate Update)> FindUpdates()
+{
+    var roots = new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() }.Distinct();
+    return roots
+        .SelectMany(r => SafeEnumerate(r, depth: 2))
+        .Where(f => f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        .Select(Path.GetFullPath).Distinct()
+        .Select(f => (Exe: f, Update: OfficialUpdate.TryIdentify(f)))
+        .Where(u => u.Update != null)
+        .Select(u => (u.Exe, u.Update!))
+        .ToList();
 }
 
 static IEnumerable<string> SafeEnumerate(string root, int depth)
@@ -189,7 +229,9 @@ static void Pause(bool interactive)
 sealed class Options
 {
     public string? Disc, Out, DgVoodooZip;
+    public string Resolution = DgVoodoo.DefaultResolution;
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd;
+    public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
 
     public static Options Parse(string[] args)
@@ -202,6 +244,11 @@ sealed class Options
             {
                 case "--out": o.Out = Next(); break;
                 case "--dgvoodoo-zip": o.DgVoodooZip = Next(); break;
+                case "--update":
+                    var update = Next();
+                    if (!File.Exists(update)) throw new PatchException($"--update: bestand niet gevonden: {update}");
+                    o.Updates.Add(update);
+                    break;
                 case "--no-dgvoodoo": o.NoDgVoodoo = true; break;
                 case "--widescreen":
                     // De beeldverhouding is optioneel: "--widescreen" alleen betekent 16:9.
@@ -210,6 +257,11 @@ sealed class Options
                         o.Widescreen = Widescreen.Parse(args[++i]) ?? throw new PatchException($"--widescreen: onbekende beeldverhouding '{args[i]}' (kies 16:9 of 16:10).");
                     break;
                 case "--wasd": o.Wasd = true; break;
+                case "--resolution":
+                    o.Resolution = Next().ToLowerInvariant();
+                    if (!DgVoodoo.IsValidResolution(o.Resolution))
+                        throw new PatchException($"--resolution: onbekende waarde '{o.Resolution}' (bijv. max, 2x, desktop, 1920x1080 of unforced).");
+                    break;
                 case "--yes" or "-y": o.Yes = true; break;
                 case "--help" or "-h" or "/?": o.ShowHelp = true; break;
                 default: o.Disc = args[i]; break;

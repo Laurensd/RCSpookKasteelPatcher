@@ -58,6 +58,38 @@ zijn er geen DLL-overrides nodig. Instellingen die de patcher zet in `dgVoodoo.c
 - `VRAM = 128`: de originele D3D-driver ziet meer dan 2 GB videogeheugen als negatief getal.
 - `ScalingMode = stretched_ar`, `FullscreenAttributes = fake`: randloos schermvullend beeld in 4:3.
 - Watermerken uit.
+- `CenterAppWindow = true`: in venstermodus (`FullScreenMode = false` of alt-enter) zet het spel zijn venster op y=-73,
+  zodat de titelbalk en de bovenste 40 pixels op een monitor boven het hoofdscherm vallen (of buiten beeld). dgVoodoo
+  centreert het venster nu op het hoofdscherm. Fake fullscreen (de standaard) merkt hier niets van.
+- `[Glide] Resolution = max` (aan te passen met `--resolution`, zie hieronder).
+
+De patcher zoekt elke sleutel binnen zijn eigen sectie (`IniFile`): `Resolution` staat zowel in `[Glide]` als in `[DirectX]`.
+
+### Renderresolutie (`--resolution`)
+
+Het spel kiest zelf een Glide-modus van hooguit 640x480 (856x480 of 640x400 met `--widescreen`). Zonder
+geforceerde resolutie (`unforced`, de standaard van dgVoodoo) rendert dgVoodoo op die resolutie en rekt het resultaat
+daarna op tot schermgrootte; op een groot scherm is dat wazig. Met `[Glide] Resolution` rendert dgVoodoo de 3D-scène
+direct op een hogere resolutie; het spel merkt daar niets van (het ziet nog steeds 640x480).
+
+- Standaard `max`: de grootste resolutie met de beeldverhouding van het spel die op het bureaublad past, bijvoorbeeld
+  1440x1080 (4:3) of 1920x1076 (16:9) op een 1080p-scherm, 3840x2153 (16:9) op 4K. Het opschalen naar het scherm valt
+  dan (bijna) weg. dgVoodoo leest de bureaubladresolutie zelf bij het starten, dus de patcher hoeft die niet te kennen
+  en een ander scherm werkt zonder opnieuw patchen.
+- Andere waarden worden ongewijzigd doorgegeven: `2x`/`3x` (veelvoud van de spelresolutie), `max_isf` (grootste
+  gehele veelvoud dat past), `desktop`, een vaste resolutie zoals `1920x1080`, of `unforced` voor het originele beeld.
+- Alleen `[Glide]`: het spel zelf tekent via Glide. `[DirectX] Resolution` blijft `unforced`, want de menu's
+  (`RcHcMenu.dat`, DirectDraw) zijn 2D-plaatjes die daar niet scherper van worden.
+- Getest (4K-scherm, 16:9): beeld en HUD kloppen op `2x` (1712x960) en `max` (3840x2153), ook het pauzemenu in het spel.
+- In een venster (`FullScreenMode = false`) bepaalt de geforceerde resolutie de venstergrootte; met `max` wordt het
+  venster dus zo groot als het scherm. Gebruik daar `2x`.
+
+Prestaties en Proton: de scènes zijn klein (een spel uit 2000), dus ook 4K kost een moderne GPU weinig. Onder Proton
+gaat dgVoodoo via DXVK (Direct3D 11 → Vulkan); dat verandert niets aan de instelling. Op de Steam Deck (en andere
+gamescope-sessies) is het "bureaublad" de gamescope-resolutie, 1280x800 op het eigen scherm: `max` wordt daar
+1280x717 (16:9) of 1066x800 (4:3), ongeveer 2x de originele resolutie en licht voor de APU. Hapert het toch (zwakke
+iGPU, groot extern scherm), patch dan opnieuw met `--resolution 2x` of `--resolution unforced`, of pas
+`Resolution` onder `[Glide]` in `dgVoodoo.conf` (of via `dgVoodooCpl.exe`) aan.
 
 ## Optie `--widescreen` (16:9 / 16:10)
 
@@ -109,8 +141,57 @@ zet in `PlayerDef.ini` dezelfde toetsen voor `MoveForward`, `MoveBack`, `TurnLef
 voor zijwaarts. Schieten (Ctrl), springen (Spatie) en ontwijken (Alt) blijven hetzelfde. Bestaande spelers met eigen toetsen
 houden die; het menu bewaart ze per speler.
 
+## Officiële updates
+
+Davilex bracht twee updates uit als Wise-installer
+([Internet Archive](https://archive.org/details/redcatspookkasteelupdate)). De patcher herkent ze aan de SHA-256 en past ze
+zelf toe, zonder de installer uit te voeren (`Updates/OfficialUpdate.cs`).
+
+| Update | Exe (SHA-256) | Wat er verandert |
+|---|---|---|
+| Win98-update, "RedCat Spookkasteel v 1.0.1.0, 19 juni 2001" | `Redcat Spookkasteel 98 patch.exe` (`6B6F671A…398A06`) | `RcHcGame.dat` (nieuwe build van 27-11-2000, zelfde code-adressen), 14 ini's in `settings` (snelheid van vleermuizen en spinnen, health van de eindbazen, vijanden per level, kaartnamen in `Game.ini`, `LanguageNL.ini` ingekort, volumes in `Volume.ini`), 28 geluiden in `Sounds`, `leesmij.hlp`/`.cnt` en `Versie.txt` |
+| XP-update ("Rc Spook XP Patch") | `Redcat Spookkasteel XP patch.exe` (`A953AAFA…74F8DE`) | Alleen `RcHcGame.dat`: opnieuw gecompileerd op 20-12-2004 (`RedCatHCD.exe`, FileVersion 1.0.0.1), 4,4 MB, alles op andere adressen |
+
+`RcHcMenu.dat` en de drivers veranderen niet. De patcher kent daarom drie versies van `RcHcGame.dat`
+(`Patching/GameVersion.cs`) en twee builds: 1.0.0 en 1.0.1 delen de patronen, de XP-build heeft eigen patronen
+(`Xp2004` in `GamePatches.cs` en `Widescreen.cs`). Een onbekende hash stopt de patcher met een melding.
+
+### Wise-installer
+
+Na de PE-stub volgen deflate-streams, elk gevolgd door de CRC-32 van de uitgepakte data. Het Wise-script (zelf een stream)
+beschrijft elke installatie-opdracht als begin, eind, datum, grootte, 20 bytes, CRC-32 en doelpad (`%MAINDIR%\…`);
+begin en eind zijn relatief aan een vaste basis in de exe. Voor de twee bekende exe's staan de positie van het script en die
+basis vast in `OfficialUpdate`.
+
+### Delta-formaat
+
+Bestanden die al op de cd staan, levert de Win98-update als delta (decoder in `WISE0232.DLL`, nagebouwd in
+`Updates/WiseDelta.cs`). Header (little-endian): `01 91 2A`, 2 bytes, CRC-32 + grootte van het nieuwe bestand,
+headerlengte (25; 0 = het hele nieuwe bestand volgt), CRC-32 + grootte van het oude bestand, lengte van de commando's.
+Daarna de commando's en de literals. Getallen lopen door met bit 7 als vervolgbit, maximaal twee bytes van 7 bits en een
+laatste van 8 bits.
+
+| Commando | Betekenis |
+|---|---|
+| `0LLLCCCC` | `L` literals, dan `C+3` bytes uit het oude bestand |
+| `1ELLLLLL` + `EKCCCCCC` [+ verschuiving] | `L` literals, dan `C+3` bytes kopiëren; `E` = getal loopt door. Zonder `K` volgt eerst een verschuiving van de leeskop (met teken, bit 6) |
+
+Literals schuiven de leeskop in het oude bestand even ver op, zodat vervangingen van gelijke lengte geen verschuiving nodig
+hebben.
+
+### Adressen in de XP-build
+
+| Fix | 1.0.0 / 1.0.1 | XP-build |
+|---|---|---|
+| `GetGlyphOutlineA` in de importtabel | `0x64A018` | `0x8A34B8` |
+| Lijst van modi (`"640x480"`) | strings achter elkaar | strings opgevuld tot 12 bytes |
+| FieldOfView-check | `test ah,40h` / `jne` | `test ah,44h` / `jnp` (zelfde sprongdoel, `jmp` +0x9D) |
+| 1/640 (HUD) | `0x64D398` | `0x76FC0C` |
+| Ongebruikte kopie van 1/480 | `0x64EB38` | `0x771A40` (direct na 255.0f; geen verwijzingen) |
+
 ## Testen zonder menu
 
 `RcHcGame.dat -game` start direct het eerste level als `settings\Player1.ini` bestaat (kopie van `PlayerDef.ini`).
 Met `DebugDriver=1` in `AdamWin.ini [Debug]` logt `AdamDebug*.log` de gekozen driver en modus, en met
-`FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster.
+`FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster (zet dan ook `[Glide] Resolution` op
+`2x` of `unforced`, anders wordt het venster schermgroot).
