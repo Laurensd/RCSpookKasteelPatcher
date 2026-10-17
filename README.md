@@ -69,6 +69,8 @@ git push origin v0.1.0
 Deze repository bevat geen bestanden van het spel of van dgVoodoo2. De patcher werkt alleen met een disc die je zelf bezit.
 dgVoodoo2 is gemaakt door Dege en wordt tijdens het patchen van de officiële GitHub-release gedownload.
 
+De code van de patcher valt onder de [MIT-licentie](LICENSE), ook alle eerdere versies en commits van deze repository. Die licentie geldt niet voor het spel zelf (© Davilex) of voor dgVoodoo2, dat zijn eigen licentie heeft.
+
 ---
 
 **English:** a patcher that makes the Dutch 2000 PC game *RedCat Spookkasteel* playable on Windows 10/11 and Linux (Proton).
