@@ -14,12 +14,15 @@ public sealed class DgVoodooTests : IDisposable
         [General]
         FullScreenMode                       = true
         ScalingMode                          = unspecified
+        CenterAppWindow                      = false
         [GeneralExt]
         FullscreenAttributes                 =
         [Glide]
+        Resolution                          = unforced
         3DfxWatermark                       = true
         [DirectX]
         VRAM                                = 256
+        Resolution                          = unforced
         dgVoodooWatermark                   = true
         """;
 
@@ -50,8 +53,39 @@ public sealed class DgVoodooTests : IDisposable
         Assert.Matches(@"(?m)^3DfxWatermark\s*= false\s*$", conf);
         Assert.Matches(@"(?m)^ScalingMode\s*= stretched_ar\s*$", conf);
         Assert.Matches(@"(?m)^FullscreenAttributes\s*= fake\s*$", conf);
+        Assert.Matches(@"(?m)^CenterAppWindow\s*= true\s*$", conf);
         Assert.Matches(@"(?m)^FullScreenMode\s*= true\s*$", conf); // ongewijzigd
     }
+
+    [Theory]
+    [InlineData(null, "max")]
+    [InlineData("2x", "2x")]
+    [InlineData("unforced", "unforced")]
+    public void Install_SetsOnlyGlideResolution(string? resolution, string expected)
+    {
+        if (resolution == null) DgVoodoo.Install(FakeZip(DefaultConf), _dir);
+        else DgVoodoo.Install(FakeZip(DefaultConf), _dir, resolution);
+
+        var conf = File.ReadAllText(Path.Combine(_dir, "dgVoodoo.conf"));
+        var glide = conf[conf.IndexOf("[Glide]")..conf.IndexOf("[DirectX]")];
+        var directX = conf[conf.IndexOf("[DirectX]")..];
+        Assert.Matches($@"(?m)^Resolution\s*= {expected}\s*$", glide);
+        Assert.Matches(@"(?m)^Resolution\s*= unforced\s*$", directX); // menu's (DirectDraw) niet geforceerd
+    }
+
+    [Theory]
+    [InlineData("max", true)]
+    [InlineData("max_isf", true)]
+    [InlineData("max_fhd_isf_2x", true)]
+    [InlineData("desktop", true)]
+    [InlineData("2x", true)]
+    [InlineData("1920x1080", true)]
+    [InlineData("1920x1080@60", true)]
+    [InlineData("unforced", true)]
+    [InlineData("0x", false)]
+    [InlineData("groot", false)]
+    [InlineData("2x\nVRAM = 4096", false)]
+    public void IsValidResolution(string value, bool valid) => Assert.Equal(valid, DgVoodoo.IsValidResolution(value));
 
     [Fact]
     public void Install_UnknownConfigLayout_Throws()

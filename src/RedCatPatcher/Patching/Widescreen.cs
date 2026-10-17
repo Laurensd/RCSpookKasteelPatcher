@@ -48,16 +48,23 @@ public sealed record Widescreen(string Name, int Width, int Height, int GlideRes
 
         // CAdamEngine::SelectDevice() zoekt automatisch naar modus "640x480" (of "320x200").
         // Die zoekterm wordt de breedbeeldmodus; de string staat in een tabel naast "640x400".
+        // In de XP-build zijn de strings in die tabel tot 12 bytes opgevuld.
         new("widescreen-select-mode", "RcHcGame.dat",
             $"Spel kiest automatisch {Width}x{Height}",
-            [new([0, .. "640x480"u8, 0, .. "640x400"u8], [0, .. ModeName(8), .. "640x400"u8])]),
+            [new([0, .. "640x480"u8, 0, .. "640x400"u8], [0, .. ModeName(8), .. "640x400"u8])],
+            Xp2004:
+            [new([0, .. "640x480"u8, 0, 0, 0, 0, 0, .. "640x400"u8], [0, .. ModeName(12), .. "640x400"u8])]),
 
         // CAdamCamera::Init() zet FieldOfView na het aanmaken van de camera terug naar 1.36 als de INI iets anders
         // zegt ("INI setting FieldOfView is ignored"). Die jne wordt een jmp, zodat [Camera-*] FieldOfView telt.
         new("widescreen-fov", "RcHcGame.dat",
             "FieldOfView uit AdamWin.ini wordt gebruikt",
             [new(Hex("d8 1d 3c f8 64 00 df e0 f6 c4 40 0f 85 9c 00 00 00"),
-                 Hex("d8 1d 3c f8 64 00 df e0 f6 c4 40 e9 9d 00 00 00 90"))]),
+                 Hex("d8 1d 3c f8 64 00 df e0 f6 c4 40 e9 9d 00 00 00 90"))],
+            // XP-build: dezelfde vergelijking, maar met test ah,44h / jnp
+            Xp2004:
+            [new(Hex("d8 1d 78 2c 77 00 df e0 f6 c4 44 0f 8b 9c 00 00 00"),
+                 Hex("d8 1d 78 2c 77 00 df e0 f6 c4 44 e9 9d 00 00 00 90"))]),
 
         // RCHud rekent iconposities om naar schermpercentages: x/640 en y/480. Op een breed scherm worden de
         // iconen dan uitgerekt. x gaat nu door de HUD-breedte (bijv. 856), die in een ongebruikte kopie van de
@@ -67,7 +74,13 @@ public sealed record Widescreen(string Name, int Width, int Height, int GlideRes
             [new(Hex("db 00 d8 0d 98 d3 64 00 d9 5c 24 08 db 40 04 d8 0d 98 d3 64 00"),
                  Hex("db 00 d8 0d 38 eb 64 00 d9 5c 24 08 db 40 04 d8 0d 38 eb 64 00")),
              new(Hex("89 88 08 3b 89 88 08 3b a8 88 65 00"),
-                 [.. Float(1f / HudWidth), .. Hex("89 88 08 3b a8 88 65 00")])]),
+                 [.. Float(1f / HudWidth), .. Hex("89 88 08 3b a8 88 65 00")])],
+            // XP-build: 1/640 staat op 0x76FC0C; de ongebruikte kopie van 1/480 op 0x771A40 (na 255.0f).
+            Xp2004:
+            [new(Hex("db 00 d8 0d 0c fc 76 00 d9 5c 24 08 db 40 04 d8 0d 0c fc 76 00"),
+                 Hex("db 00 d8 0d 40 1a 77 00 d9 5c 24 08 db 40 04 d8 0d 40 1a 77 00")),
+             new(Hex("00 00 7f 43 89 88 08 3b 89 88 08 3b"),
+                 [.. Hex("00 00 7f 43"), .. Float(1f / HudWidth), .. Hex("89 88 08 3b")])]),
     ];
 
     /// <summary>INI-aanpassingen: FOV van de spelcamera's en de positie van de HUD-iconen rechts.</summary>

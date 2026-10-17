@@ -8,6 +8,12 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 ### Toegevoegd
 - Optie `--widescreen [16:9|16:10]`: breedbeeld (856×480 of 640×400) met een breder blikveld en een HUD dat niet wordt uitgerekt. Standaard 16:9.
 - Optie `--wasd`: W/A/S/D als standaardbesturing in plaats van de pijltjestoetsen, voor nieuwe spelers en via de knop Standaard bij Instellingen.
+- Ondersteuning voor de officiële Win98-update (v1.0.1) en XP-update (2004) van Davilex. Zet de update-exe's naast de patcher of geef ze op met `--update`; de patcher pakt ze zelf uit (zonder de installer te draaien) en past de fixes en opties toe op de bijbehorende build.
+- Versieherkenning: de patcher toont welke versie hij patcht en stopt met een melding (grootte, SHA-256) bij een onbekende versie of update, in plaats van halverwege een patroon te missen.
+- Scherper beeld: dgVoodoo2 rendert het spel standaard op schermresolutie (`[Glide] Resolution = max`) in plaats van 640x480 op te rekken. Aan te passen met `--resolution` (bijv. `2x`, `1920x1080`, of `unforced` voor het origineel).
+
+### Opgelost
+- In venstermodus (alt-enter of `FullScreenMode = false`) stond het spelvenster te hoog, met de titelbalk op een monitor erboven of buiten beeld. dgVoodoo2 centreert het venster nu op het hoofdscherm (`CenterAppWindow = true`).
 
 ## [0.1.0] - 2026-10-17
 
