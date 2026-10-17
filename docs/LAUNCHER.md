@@ -274,9 +274,9 @@ Bevindingen tot nu toe:
 Nog te testen (met de hand, zie de teststappen in de README): Linux-desktop onder Proton, Steam Deck in Game Mode
 (leesbaarheid op 1280×800, d-pad/A/B, of Steam de sessie vasthoudt nadat de launcher sluit).
 
-Voorlopige keuze: **Avalonia**, als het venster onder Proton zonder `--software` tekent en de controller werkt op de Deck.
-Tekent het alleen met `--software`, dan nog steeds Avalonia met software-rendering als standaard (een launcher heeft geen
-GPU nodig). Werkt Avalonia onder Proton helemaal niet, dan WinForms ongetrimd.
+Keuze (17-10-2026): **Avalonia**, getrimd single-file met ReadyToRun, zoals de proef. Blijft het venster op een
+systeem leeg of zwart, dan is software-rendering (`Win32RenderingMode.Software`) de terugval; een launcher heeft geen
+GPU nodig. De controller via de eigen XInput-poll uit de proef.
 
 ## Een echt menu in het spel?
 
@@ -319,9 +319,8 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
    Nog te doen: één functie die basis + keuze → de drie bestanden opbouwt, met tests over alle combinaties van opties.
 3. **De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**; `BackupUserData` neemt het keuzebestand mee.
    Bestaande opties blijven werken.
-4. **Proef: GUI-framework onder Proton** en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
-   Pas daarna het framework kiezen. Gebouwd, Windows gemeten; Proton en Deck nog met de hand testen (zie "Proef
-   GUI-framework").
+4. ~~**Proef: GUI-framework onder Proton**~~ en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
+   Gedaan: Avalonia (zie "Proef GUI-framework").
 5. **Launcher, tabblad Spelen**: groep 2 (breedbeeld, besturing, controller, beeld, logs) via "opbouwen uit de basis",
    plus de stand "direct spelen" zonder venster.
 6. **Snelkoppelingen en Steam naar de launcher**, met herkenning van de oude regel naar `RedCat.exe`.
