@@ -75,6 +75,66 @@ public class OptionsPatchesTests
     }
 
     [Fact]
+    public void WidescreenSettings_AreIdempotent_AndCanSwitchOrRevert()
+    {
+        var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(dir, "settings"));
+            const string adamWin = "[Camera-LevelCamera]\r\nFieldOfView=1.360000\r\n[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n";
+            const string hud = "[Icon0]\r\nX=9\r\n[Icon3]\r\nX=510\r\n[Icon4]\r\nX=320\r\n";
+            File.WriteAllText(Path.Combine(dir, "AdamWin.ini"), adamWin);
+            File.WriteAllText(Path.Combine(dir, "settings", "HUDIcon.ini"), hud);
+            string Hud() => File.ReadAllText(Path.Combine(dir, "settings", "HUDIcon.ini"));
+
+            Widescreen.Wide16x9.ApplySettings(dir);
+            Widescreen.Wide16x9.ApplySettings(dir);
+            Assert.Equal("[Icon0]\r\nX=9\r\n[Icon3]\r\nX=726\r\n[Icon4]\r\nX=536\r\n", Hud());
+
+            Widescreen.Wide16x10.ApplySettings(dir);
+            Assert.Equal("[Icon0]\r\nX=9\r\n[Icon3]\r\nX=638\r\n[Icon4]\r\nX=448\r\n", Hud());
+            Assert.Contains("FieldOfView=1.632000", File.ReadAllText(Path.Combine(dir, "AdamWin.ini")));
+
+            Widescreen.ApplySettings(dir, null);
+            Assert.Equal(hud, Hud());
+            Assert.Equal(adamWin, File.ReadAllText(Path.Combine(dir, "AdamWin.ini")));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void WidescreenSettings_UnknownFieldOfView_ThrowsWithoutChanges()
+    {
+        var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(dir, "settings"));
+            const string adamWin = "[Camera-LevelCamera]\r\nFieldOfView=2.000000\r\n[Camera-PlayerCamera]\r\nFieldOfView=2.000000\r\n";
+            File.WriteAllText(Path.Combine(dir, "AdamWin.ini"), adamWin);
+            File.WriteAllText(Path.Combine(dir, "settings", "HUDIcon.ini"), "[Icon3]\r\nX=510\r\n");
+
+            Assert.Throws<PatchException>(() => Widescreen.Wide16x9.ApplySettings(dir));
+            Assert.Equal(adamWin, File.ReadAllText(Path.Combine(dir, "AdamWin.ini")));
+        }
+        finally { Directory.Delete(dir, true); }
+    }
+
+    [Fact]
+    public void IniFile_Get_ReadsFirstOfDuplicateSections_WithoutWriting()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "[A]\nKey= x \n[A]\nKey=y\n[B]\nOther=1\n");
+            var written = File.GetLastWriteTimeUtc(path);
+            Assert.Equal(" x ", IniFile.Get(path, "a", "key"));
+            Assert.Throws<PatchException>(() => IniFile.Get(path, "B", "Key"));
+            Assert.Equal(written, File.GetLastWriteTimeUtc(path));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void ModernControls_SetsMenuDefaultsAndKeyBinds_PreservingOtherBytes()
     {
         var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;

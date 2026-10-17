@@ -65,6 +65,19 @@ public sealed class BinaryPatchTests : IDisposable
     }
 
     [Fact]
+    public void Apply_InMemory_PatchesInPlace_AndLeavesDataUntouchedOnError()
+    {
+        byte[] data = [0xAA, 1, 2, 0xBB, 3, 4, 5, 0xCC];
+        Assert.Equal(PatchResult.Applied, Patch(([1, 2], [1, 2, 0]), ([3, 4, 5], [6, 7])).Apply(data));
+        Assert.Equal(new byte[] { 0xAA, 1, 2, 0, 0xBB, 6, 7, 0xCC }, data);
+
+        byte[] other = [1, 2, 3, 9];
+        // tweede vervanging ontbreekt: ook de eerste mag niet in de data terechtkomen
+        Assert.Throws<PatchException>(() => Patch(([1, 2], [5, 5]), ([7, 7], [8, 8])).Apply(other));
+        Assert.Equal(new byte[] { 1, 2, 3, 9 }, other);
+    }
+
+    [Fact]
     public void Apply_UsesXp2004Replacements_OnlyForThatBuild()
     {
         var patch = new BinaryPatch("test", "game.dat", "test", [new([1, 2], [3, 4])], Xp2004: [new([5, 6], [7, 8])]);

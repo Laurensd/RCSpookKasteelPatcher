@@ -54,6 +54,19 @@ public class ControllerTests
     }
 
     [Fact]
+    public void PatchTable_InMemory_CanSwitchAndRevertToOriginal()
+    {
+        var original = GameFile([0x67, 0x01, 0x00, 0x00]);
+        var data = (byte[])original.Clone();
+
+        Assert.Equal(PatchResult.Applied, Controller.PatchTable(data, Controller.Mapping(wasd: true, buttons: true)));
+        Assert.Equal(PatchResult.Applied, Controller.PatchTable(data, Controller.Mapping(wasd: false, buttons: true)));
+        Assert.Equal(Controller.Mapping(wasd: false, buttons: true), Controller.ReadTable(data));
+        Assert.Equal(PatchResult.Applied, Controller.PatchTable(data, Controller.Original));
+        Assert.Equal(original, data);
+    }
+
+    [Fact]
     public void Mapping_StickFollowsWasd_ButtonsOnlyWithController()
     {
         var wasdOnly = Controller.Mapping(wasd: true, buttons: false);

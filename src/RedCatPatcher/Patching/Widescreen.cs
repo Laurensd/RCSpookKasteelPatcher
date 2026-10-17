@@ -84,19 +84,42 @@ public sealed record Widescreen(string Name, int Width, int Height, int GlideRes
     ];
 
     /// <summary>INI-aanpassingen: FOV van de spelcamera's en de positie van de HUD-iconen rechts.</summary>
-    public void ApplySettings(string gameDir)
+    public void ApplySettings(string gameDir) => ApplySettings(gameDir, this);
+
+    /// <summary>
+    /// Zet de INI-waarden voor <paramref name="target"/> (null = 4:3, het origineel). Herhaalbaar en omkeerbaar: de
+    /// huidige stand volgt uit <c>FieldOfView</c> in AdamWin.ini, en de iconen rechts schuiven vanaf hun originele
+    /// positie, niet vanaf de huidige. Zo kan 16:9 naar 16:10 of terug naar 4:3 zonder de bestanden van de disc.
+    /// </summary>
+    public static void ApplySettings(string gameDir, Widescreen? target)
     {
-        var fov = FieldOfView.ToString("0.000000", CultureInfo.InvariantCulture);
         var adamWin = Path.Combine(gameDir, "AdamWin.ini");
+        var current = Current(IniFile.Get(adamWin, "Camera-LevelCamera", "FieldOfView"));
+
+        var fov = (target?.FieldOfView ?? OriginalFov).ToString("0.000000", CultureInfo.InvariantCulture);
         IniFile.Set(adamWin, "Camera-LevelCamera", "FieldOfView", fov);
         IniFile.Set(adamWin, "Camera-PlayerCamera", "FieldOfView", fov);
 
-        // Iconen in de rechterhelft (score, toverdrank) blijven rechts uitgelijnd.
-        int shift = HudWidth - HudVirtualWidth;
+        // Iconen in de rechterhelft (score, toverdrank) blijven rechts uitgelijnd. Een verschoven icoon staat op
+        // origineel + verschuiving, met origineel >= 320; een icoon links is nooit verschoven en blijft onder 320.
+        int from = Shift(current), to = Shift(target);
         IniFile.Update(Path.Combine(gameDir, "settings", "HUDIcon.ini"),
             section => Regex.IsMatch(section, @"^Icon\d+$", RegexOptions.IgnoreCase),
             "X",
-            x => int.TryParse(x.Trim(), out int v) && v >= HudVirtualWidth / 2 ? (v + shift).ToString(CultureInfo.InvariantCulture) : x);
+            x => int.TryParse(x.Trim(), out int v) && v - from >= HudVirtualWidth / 2 ? (v - from + to).ToString(CultureInfo.InvariantCulture) : x);
+    }
+
+    private static int Shift(Widescreen? wide) => wide == null ? 0 : wide.HudWidth - HudVirtualWidth;
+
+    /// <summary>Welke beeldverhouding de INI's nu hebben, af te lezen aan het FOV (null = 4:3).</summary>
+    private static Widescreen? Current(string fieldOfView)
+    {
+        if (!float.TryParse(fieldOfView.Trim(), CultureInfo.InvariantCulture, out float fov))
+            throw new PatchException($"FieldOfView '{fieldOfView.Trim()}' in AdamWin.ini is geen getal.");
+        foreach (var wide in new Widescreen?[] { null, Wide16x9, Wide16x10 })
+            if (MathF.Abs(fov - (wide?.FieldOfView ?? OriginalFov)) < 0.0005f) return wide;
+        throw new PatchException($"FieldOfView {fieldOfView.Trim()} in AdamWin.ini hoort niet bij 4:3, 16:9 of 16:10; " +
+            "zet het terug op 1.360000 of patch opnieuw vanaf de disc.");
     }
 
     private byte[] ModeName(int length) => Encoding.ASCII.GetBytes($"{Width}x{Height}".PadRight(length, '\0'));

@@ -13,6 +13,29 @@ public static class IniFile
     public static void Set(string path, string section, string key, string value) =>
         Update(path, s => s.Equals(section, StringComparison.OrdinalIgnoreCase), key, _ => value, firstSectionOnly: true);
 
+    /// <summary>De waarde van <paramref name="key"/> in de eerste sectie met de naam <paramref name="section"/>.</summary>
+    public static string Get(string path, string section, string key)
+    {
+        if (!File.Exists(path))
+            throw new PatchException($"{Path.GetFileName(path)} niet gevonden in de spelmap.");
+
+        bool inSection = false;
+        foreach (var line in File.ReadLines(path, Encoding.Latin1))
+        {
+            var header = Regex.Match(line, @"^\s*\[([^\]]*)\]");
+            if (header.Success)
+            {
+                // Net als Update: bij dubbele secties telt alleen de eerste.
+                if (inSection) break;
+                inSection = header.Groups[1].Value.Equals(section, StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            var entry = Regex.Match(line, $@"^\s*{Regex.Escape(key)}\s*=(.*)$", RegexOptions.IgnoreCase);
+            if (inSection && entry.Success) return entry.Groups[1].Value;
+        }
+        throw new PatchException($"Instelling '{key}' niet gevonden in {Path.GetFileName(path)}.");
+    }
+
     /// <summary>
     /// Past <paramref name="key"/> aan in elke sectie waarvan de naam aan <paramref name="sectionFilter"/> voldoet.
     /// <paramref name="change"/> krijgt de huidige waarde en geeft de nieuwe terug.

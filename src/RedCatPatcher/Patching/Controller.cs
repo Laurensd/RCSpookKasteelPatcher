@@ -75,13 +75,25 @@ public static class Controller
         if (!System.IO.File.Exists(path)) throw new PatchException($"{File} niet gevonden in de spelmap.");
 
         var data = System.IO.File.ReadAllBytes(path);
+        var result = PatchTable(data, mapping);
+        if (result == PatchResult.Applied) System.IO.File.WriteAllBytes(path, data);
+        return result;
+    }
+
+    /// <summary>
+    /// Schrijft de tabel in de inhoud van RcHcGame.dat in het geheugen. Elke toewijzing kan, dus ook terug naar
+    /// <see cref="Original"/>.
+    /// </summary>
+    public static PatchResult PatchTable(byte[] data, byte[] mapping)
+    {
+        if (mapping.Length != Entries || mapping.Any(vk => vk >= 0x80))
+            throw new ArgumentException("14 virtual-key-codes onder 0x80 verwacht (push imm8 is signed).", nameof(mapping));
+
         int at = FindTable(data);
-        var current = ReadTable(data, at);
-        if (current.SequenceEqual(mapping)) return PatchResult.AlreadyApplied;
+        if (ReadTable(data, at).SequenceEqual(mapping)) return PatchResult.AlreadyApplied;
 
         for (int i = 0; i < CallOrder.Length; i++)
             data[at + i * CallSize + 1] = mapping[CallOrder[i]];
-        System.IO.File.WriteAllBytes(path, data);
         return PatchResult.Applied;
     }
 
