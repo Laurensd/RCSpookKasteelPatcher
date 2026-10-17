@@ -27,6 +27,7 @@ public static class TestDisc
         var iso = new byte[next * S];
 
         WriteDescriptor(iso, 16, type: 1, rootLba: 20, jolietEscape: false);
+        BitConverter.GetBytes(next).CopyTo(iso, 16 * S + 80); // volumegrootte in sectoren
         if (joliet) WriteDescriptor(iso, 17, type: 2, rootLba: 22, jolietEscape: true);
         WriteDescriptor(iso, joliet ? 18 : 17, type: 255, rootLba: 0, jolietEscape: false);
 

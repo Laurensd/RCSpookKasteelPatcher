@@ -3,6 +3,25 @@
 Analyse van **RedCat Spookkasteel v1.0.0** (Davilex, 2000, ISBN 9055826200) op Windows 11.
 Disc-image: `RedCat.bin`, één datatrack MODE2/2352, SHA-1 `5fe44a24722141d6a264ce3a613643e0583fa1a4`.
 
+## Disc-controle
+
+`Disc/DiscVerifier.cs` hasht de image in één keer, in blokken van 512 sectoren, met twee SHA-1's:
+
+| Hash | Over | v1.0.0 |
+|---|---|---|
+| Image | Het databestand zoals het is (`.bin` of `.iso`) | `5fe44a24722141d6a264ce3a613643e0583fa1a4` |
+| Data | De 2048 bytes gebruikersdata van elke sector binnen het ISO 9660-volume | `04cd30e4ff3bad58a6201ecee06cad3862a814a1` |
+
+De datahash is hetzelfde voor een `.bin` (MODE2/2352, MODE1/2352, 2336) en een `.iso` (2048) van dezelfde cd. Hij loopt
+tot de volumegrootte uit de primary volume descriptor (offset 80: 98.895 sectoren), dus de 302 lege sectoren na het volume
+in `RedCat.bin` (postgap, track 99.197 sectoren) tellen niet mee. Een `.iso` met of zonder die sectoren wordt dus ook herkend.
+
+Herkent geen van beide hashes de image, dan vergelijkt de patcher de SHA-256 van de bestanden die hij aanpast en nodig heeft
+(`RcHcGame.dat`, `RcHcMenu.dat` en `GlideDrv.dll` uit `GameVersion.CdFiles`, plus `RedCat.exe`) rechtstreeks in de
+ISO-boom. Kloppen die, dan is het een andere rip en gaat de patcher door. Ontbreekt er een, wijkt er een af, of is de image
+korter dan het volume, dan volgt een waarschuwing met de details; interactief vraagt de patcher of hij toch moet doorgaan.
+Een fout in een ander bestand (bijv. een level) bij een onbekende rip valt zo niet op: daarvoor is de bekende hash nodig.
+
 ## Opbouw van het spel
 
 Alles staat in de map `Data` op de cd. Een installatie is niet nodig: het spel draait direct vanuit een kopie van die map.

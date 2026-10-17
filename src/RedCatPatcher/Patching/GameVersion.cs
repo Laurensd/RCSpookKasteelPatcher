@@ -38,6 +38,10 @@ public sealed record GameVersion(string Name, ExeBuild Build)
         ("GlideDrv.dll", "86EA51AEFA315E87AD847EFBC58D90A8738FBC6D710B52A1315AC42420193811"),
     ];
 
+    /// <summary>De bestanden die de patcher aanpast, zoals ze op de cd-rom (v1.0.0) staan.</summary>
+    public static IEnumerable<(string File, string Sha256)> CdFiles =>
+        Unchanged.Prepend(("RcHcGame.dat", GameExe.Single(e => e.Value == V100).Key));
+
     public static GameVersion Detect(string gameDir)
     {
         var (exeData, exeHash) = Read(gameDir, "RcHcGame.dat");

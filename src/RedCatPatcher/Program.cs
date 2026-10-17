@@ -56,6 +56,12 @@ try
     {
         var iso = new Iso9660(disc);
         Console.WriteLine($"       {disc.Description}, volume '{iso.VolumeLabel}'");
+        var check = DiscVerifier.Verify(disc, iso, Console.IsOutputRedirected ? null
+            : (done, total) => Console.Write($"\r       Disc controleren... {done * 100 / total}%"));
+        if (!Console.IsOutputRedirected) Console.Write($"\r{new string(' ', 40)}\r");
+        foreach (var line in check.Report()) Console.WriteLine($"       {line}");
+        if (check.Status == DiscStatus.Suspicious && interactive && !Ask("       Toch doorgaan? [j/N] "))
+            return 1;
         var data = iso.Find("Data") ?? throw new PatchException("Map 'Data' niet gevonden op de disc. Is dit de RedCat Spookkasteel cd-rom?");
         if (data.Children.All(c => !c.Name.Equals("RcHcGame.dat", StringComparison.OrdinalIgnoreCase)))
             throw new PatchException("RcHcGame.dat niet gevonden op de disc. Is dit de RedCat Spookkasteel cd-rom?");
