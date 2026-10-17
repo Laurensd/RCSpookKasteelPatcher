@@ -21,7 +21,7 @@ Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--resolution <waarde>] [--yes]
+              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--yes]
 ```
 
 `--dgvoodoo-zip` installeert offline met een zelf gedownloade
@@ -57,6 +57,7 @@ Deze zijn standaard uit (behalve de renderresolutie); zet ze aan met een vlag (o
 | `--widescreen 16:10` | Hetzelfde voor 16:10-schermen (640×400), bijvoorbeeld de Steam Deck |
 | `--resolution <waarde>` | Interne renderresolutie (standaard `max`: het spel wordt op schermresolutie gerenderd in plaats van op 640×480 en daarna opgerekt, dus veel scherper). Andere waarden: `2x`, `3x`, `desktop`, `1920x1080`, of `unforced` voor het originele (wazige) beeld. Kies `2x` of `unforced` als het spel op een zwakke GPU hapert |
 | `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
+| `--controller` | Gamepad-indeling voor in het spel (zie hieronder) |
 
 Bijvoorbeeld:
 
@@ -66,6 +67,26 @@ RedCatPatcher.exe --widescreen --wasd
 
 Spelers die al eigen toetsen hadden ingesteld houden die; kies bij Instellingen → Instellen op Standaard om WASD te krijgen.
 Tussenfilmpjes en de tekstballonnen blijven 4:3-ontwerp en worden op breedbeeld breder getekend.
+
+### Controller
+
+Het spel kan zelf een joystick lezen (linkerstick en knoppen), ook een Xbox-controller of de Steam Deck. Met
+`--controller` krijgt die een logische indeling:
+
+| Knop | Actie |
+|---|---|
+| Linkerstick | lopen en draaien |
+| A | springen |
+| B (vasthouden) | ontwijken; met de stick zijwaarts |
+| X | schieten |
+| LB / RB | vorig / volgend wapen |
+| Back | scores |
+| Start | menu |
+| Linkerstick indrukken | camera centreren |
+
+Sluit de controller aan vóór je het spel start. De d-pad, triggers en rechterstick doen niets. Het **menu** werkt niet
+met de controller: gebruik de muis, of op de Steam Deck de standaard Steam-indeling (rechtertrackpad = muis, R2 = klikken).
+Wie in het menu andere toetsen kiest voor lopen, schieten, springen of ontwijken, verliest die op de controller.
 
 ### Linux / Steam Deck
 

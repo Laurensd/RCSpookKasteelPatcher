@@ -22,6 +22,8 @@ if (options.ShowHelp)
           --no-dgvoodoo              dgVoodoo2 niet installeren
           --widescreen [16:9|16:10]  Breedbeeld in plaats van 4:3 (standaard 16:9)
           --wasd                     WASD als standaardbesturing in plaats van de pijltjestoetsen
+          --controller               Gamepad-indeling: stick beweegt, A springen, B ontwijken, X schieten,
+                                     LB/RB wapen wisselen, Back scores, Start menu (alleen in het spel, niet in het menu)
           --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
                                      scherm toelaat). Bijv. 2x, 3x, desktop, 1920x1080, of unforced (origineel)
           --yes                      Niets vragen; bestaande installatiemap overschrijven
@@ -104,7 +106,7 @@ try
     }
 
     // 5. Opties
-    if (options.Widescreen != null || options.Wasd)
+    if (options.Widescreen != null || options.Wasd || options.Controller)
     {
         Console.WriteLine();
         Console.WriteLine("Opties:");
@@ -120,6 +122,12 @@ try
     {
         ModernControls.Apply(outDir);
         Console.WriteLine($"  [ok] {ModernControls.Description}");
+    }
+    if (options.Controller || options.Wasd)
+    {
+        // Zonder --controller alleen de stick naar WASD, anders bestuurt de stick met --wasd niets meer.
+        Controller.Apply(outDir, options.Wasd, buttons: options.Controller);
+        Console.WriteLine($"  [ok] {(options.Controller ? Controller.Description : "Joystick-stick volgt WASD")}");
     }
 
     // 6. dgVoodoo2
@@ -236,7 +244,7 @@ sealed class Options
 {
     public string? Disc, Out, DgVoodooZip;
     public string Resolution = DgVoodoo.DefaultResolution;
-    public bool NoDgVoodoo, Yes, ShowHelp, Wasd;
+    public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
 
@@ -263,6 +271,7 @@ sealed class Options
                         o.Widescreen = Widescreen.Parse(args[++i]) ?? throw new PatchException($"--widescreen: onbekende beeldverhouding '{args[i]}' (kies 16:9 of 16:10).");
                     break;
                 case "--wasd": o.Wasd = true; break;
+                case "--controller": o.Controller = true; break;
                 case "--resolution":
                     o.Resolution = Next().ToLowerInvariant();
                     if (!DgVoodoo.IsValidResolution(o.Resolution))
