@@ -17,8 +17,11 @@ public sealed class DgVoodooTests : IDisposable
         CenterAppWindow                      = false
         [GeneralExt]
         FullscreenAttributes                 =
+        FPSLimit                             = 0
         [Glide]
         Resolution                          = unforced
+        Antialiasing                        = appdriven
+        ForceVerticalSync                   = true
         3DfxWatermark                       = true
         [DirectX]
         VRAM                                = 256
@@ -54,8 +57,62 @@ public sealed class DgVoodooTests : IDisposable
         Assert.Matches(@"(?m)^ScalingMode\s*= stretched_ar\s*$", conf);
         Assert.Matches(@"(?m)^FullscreenAttributes\s*= fake\s*$", conf);
         Assert.Matches(@"(?m)^CenterAppWindow\s*= true\s*$", conf);
-        Assert.Matches(@"(?m)^FullScreenMode\s*= true\s*$", conf); // ongewijzigd
+        Assert.Matches(@"(?m)^FullScreenMode\s*= true\s*$", conf);
+        Assert.Matches(@"(?m)^FPSLimit\s*= 0\s*$", conf);
+        Assert.Matches(@"(?m)^ForceVerticalSync\s*= true\s*$", conf);
+        Assert.Matches(@"(?m)^Antialiasing\s*= 4x\s*$", conf);
     }
+
+    private string InstallWith(DisplayOptions display)
+    {
+        DgVoodoo.Install(FakeZip(DefaultConf), _dir, display);
+        return File.ReadAllText(Path.Combine(_dir, "dgVoodoo.conf"));
+    }
+
+    private static string GlideSection(string conf) => conf[conf.IndexOf("[Glide]")..conf.IndexOf("[DirectX]")];
+
+    [Fact]
+    public void Install_DisplayWindow_UsesWindowAnd2x()
+    {
+        var conf = InstallWith(new DisplayOptions { Mode = DisplayMode.Window });
+        Assert.Matches(@"(?m)^FullScreenMode\s*= false\s*$", conf);
+        Assert.Matches(@"(?m)^Resolution\s*= 2x\s*$", GlideSection(conf)); // niet "max": dan wordt het venster schermgroot
+        Assert.Matches(@"(?m)^FullscreenAttributes\s*= fake\s*$", conf); // alt-enter: randloos
+    }
+
+    [Fact]
+    public void Install_DisplayWindow_KeepsExplicitResolution()
+    {
+        var conf = InstallWith(new DisplayOptions { Mode = DisplayMode.Window, Resolution = "3x" });
+        Assert.Matches(@"(?m)^Resolution\s*= 3x\s*$", GlideSection(conf));
+    }
+
+    [Fact]
+    public void Install_DisplayFullscreen_IsExclusive()
+    {
+        var conf = InstallWith(new DisplayOptions { Mode = DisplayMode.Fullscreen });
+        Assert.Matches(@"(?m)^FullScreenMode\s*= true\s*$", conf);
+        Assert.Matches(@"(?m)^FullscreenAttributes\s*=\s*$", conf); // geen "fake"
+        Assert.Matches(@"(?m)^Resolution\s*= max\s*$", GlideSection(conf));
+    }
+
+    [Fact]
+    public void Install_FpsVsyncMsaaCrt()
+    {
+        var conf = InstallWith(new DisplayOptions { FpsLimit = 60, VSync = false, Antialiasing = "off", Crt = true });
+        Assert.Matches(@"(?m)^FPSLimit\s*= 60\s*$", conf);
+        Assert.Matches(@"(?m)^ForceVerticalSync\s*= false\s*$", conf);
+        Assert.Matches(@"(?m)^Antialiasing\s*= off\s*$", conf);
+        Assert.Matches(@"(?m)^ScalingMode\s*= stretched_ar_crt\s*$", conf);
+    }
+
+    [Theory]
+    [InlineData("borderless", DisplayMode.Borderless)]
+    [InlineData("Fullscreen", DisplayMode.Fullscreen)]
+    [InlineData("window", DisplayMode.Window)]
+    [InlineData("windowed", DisplayMode.Window)]
+    [InlineData("groot", null)]
+    public void ParseMode(string value, DisplayMode? expected) => Assert.Equal(expected, DisplayOptions.ParseMode(value));
 
     [Theory]
     [InlineData(null, "max")]

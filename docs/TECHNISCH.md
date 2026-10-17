@@ -115,7 +115,8 @@ Op Linux gaat dat via DXVK. Het spel kiest automatisch de Glide-driver (`Glide2x
 zijn er geen DLL-overrides nodig. Instellingen die de patcher zet in `dgVoodoo.conf`:
 
 - `VRAM = 128`: de originele D3D-driver ziet meer dan 2 GB videogeheugen als negatief getal.
-- `ScalingMode = stretched_ar`, `FullscreenAttributes = fake`: randloos schermvullend beeld in 4:3.
+- `ScalingMode = stretched_ar`, `FullscreenAttributes = fake`: randloos schermvullend beeld in 4:3 (aan te passen met `--display` en `--crt`).
+- `[Glide] Antialiasing = 4x` (MSAA, `--msaa`); vsync en `FPSLimit` blijven op de standaard van dgVoodoo (zie "Beeldopties").
 - Watermerken uit.
 - `CenterAppWindow = true`: in venstermodus (`FullScreenMode = false` of alt-enter) zet het spel zijn venster op y=-73,
   zodat de titelbalk en de bovenste 40 pixels op een monitor boven het hoofdscherm vallen (of buiten beeld). dgVoodoo
@@ -149,6 +150,50 @@ gamescope-sessies) is het "bureaublad" de gamescope-resolutie, 1280x800 op het e
 1280x717 (16:9) of 1066x800 (4:3), ongeveer 2x de originele resolutie en licht voor de APU. Hapert het toch (zwakke
 iGPU, groot extern scherm), patch dan opnieuw met `--resolution 2x` of `--resolution unforced`, of pas
 `Resolution` onder `[Glide]` in `dgVoodoo.conf` (of via `dgVoodooCpl.exe`) aan.
+
+### Beeldopties (`--display`, `--fps-limit`, `--no-vsync`, `--msaa`, `--crt`)
+
+Allemaal instellingen in `dgVoodoo.conf` (`DisplayOptions` in `Patching/DgVoodoo.cs`); het spel zelf verandert niet.
+
+| Optie | dgVoodoo.conf | Standaard |
+|---|---|---|
+| `--display borderless` | `FullScreenMode = true`, `FullscreenAttributes = fake` | ja |
+| `--display fullscreen` | `FullScreenMode = true`, `FullscreenAttributes` leeg (exclusief) | |
+| `--display window` | `FullScreenMode = false`; `[Glide] Resolution = 2x` tenzij `--resolution` is opgegeven | |
+| `--fps-limit <n>` | `[GeneralExt] FPSLimit` | `0` (geen limiet) |
+| `--no-vsync` | `[Glide] ForceVerticalSync = false` | vsync aan |
+| `--msaa <off\|2x\|4x\|8x\|16x>` | `[Glide] Antialiasing` | `4x` |
+| `--crt` | `ScalingMode = stretched_ar_crt` | uit |
+
+**Venster.** Met `max` zou het venster zo groot worden als het scherm (zie hierboven), dus `--display window` kiest
+`2x`: 1280x960 (4:3) of 1712x960 (16:9), past op een 1080p-scherm. `CenterAppWindow` zet het venster midden op het
+hoofdscherm. Exclusief volledig scherm (`fullscreen`) wisselt van beeldmodus; dat is trager bij alt-tab en werkt onder
+Proton/gamescope niet beter, daarom blijft `borderless` de standaard.
+
+**Framerate en timing.** Getest op een 240 Hz-scherm (4K) met `DebugPlayerPosition=1` in `AdamWin.ini`: die logt
+per spelframe de positie van de speler. Een testscript start `RcHcGame.dat -game`, houdt 1 s de pijl omhoog vast,
+springt en loopt nog 1 s, met vier instellingen:
+
+| dgVoodoo | Spelframes per seconde | Afstand in 1 s | Sprong (hoogte) |
+|---|---|---|---|
+| `FPSLimit = 30` | 30 | 219 | 41,6 |
+| `FPSLimit = 60` | 60 | 223 | 41,6 |
+| vsync uit, geen limiet | 60 | 220 | 41,6 |
+| vsync aan (240 Hz) | 61 | 222 | 41,6 |
+
+Twee conclusies. De engine begrenst zichzelf op ongeveer 60 spelframes per seconde, ook zonder vsync of limiet; een
+144/240 Hz-scherm of een ontbrekende limiet laat het spel dus niet sneller lopen. En beweging en sprongen rekenen met de
+verstreken tijd (`CAdamClock`, `QueryPerformanceCounter`/`timeGetTime`), niet per frame: ook op 30 fps zijn afstand en
+sprong gelijk (de kleine verschillen komen van het handmatig timen van de toets). Er is dus geen limiet nodig. De patcher
+laat dgVoodoo's standaard staan (vsync aan in `[Glide]`, `FPSLimit = 0`); `--fps-limit` is er voor wie stroom wil
+sparen (Steam Deck: `--fps-limit 30`) of vsync uitzet.
+
+**Beeldkwaliteit.** dgVoodoo kent voor Glide alleen `Antialiasing` (MSAA) en `TMUFiltering` (appdriven, pointsampled,
+bilinear). Anisotrope filtering bestaat alleen voor DirectX (`[DirectX] Filtering`); het spel tekent via Glide en de
+menu's zijn 2D-plaatjes, dus daar is geen optie voor. MSAA staat standaard op `4x`: dat ondersteunt elke Direct3D 11-GPU
+(ook de Steam Deck en DXVK), het haalt de kartelranden van de levelgeometrie weg en kost bij deze kleine scènes vrijwel
+niets. `8x`/`16x` werken alleen als de GPU ze ondersteunt. Het CRT-effect (`stretched_ar_crt`) is een schaalmodus van
+dgVoodoo zelf: scanlines en een licht gebold beeld bij het schalen naar het scherm, ook in een venster.
 
 ## Optie `--widescreen` (16:9 / 16:10)
 

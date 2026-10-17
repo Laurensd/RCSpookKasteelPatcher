@@ -39,9 +39,7 @@ public static class DgVoodoo
         ("DirectX", "VRAM", "128"),                   // oude driver rekent >2 GB videogeheugen negatief
         ("DirectX", "dgVoodooWatermark", "false"),
         ("Glide", "3DfxWatermark", "false"),
-        ("General", "ScalingMode", "stretched_ar"),   // beeldvullend met behoud van de beeldverhouding
         ("General", "CenterAppWindow", "true"),       // venstermodus: spel zet zijn venster deels boven het hoofdscherm
-        ("GeneralExt", "FullscreenAttributes", "fake"), // randloos venster op schermgrootte (werkt goed met alt-tab en Proton)
     ];
 
     /// <summary>
@@ -51,6 +49,9 @@ public static class DgVoodoo
     public static bool IsValidResolution(string value) =>
         Regex.IsMatch(value,
             @"^(unforced|(max(_isf)?|max_fhd(_isf)?|max_qhd(_isf)?|desktop)(_[1-9]\d?x)?|[1-9]\d?x|\d{3,5}x\d{3,5}(@\d{2,3})?)$");
+
+    /// <summary>Waarden voor <c>--msaa</c>, zoals dgVoodoo ze kent (<c>[Glide] Antialiasing</c>).</summary>
+    public static readonly string[] AntialiasingValues = ["off", "2x", "4x", "8x", "16x"];
 
     public static async Task<byte[]> GetZipAsync(string? localZip, Action<string> log)
     {
@@ -73,8 +74,12 @@ public static class DgVoodoo
         return zip;
     }
 
-    public static void Install(byte[] zipBytes, string gameDir, string glideResolution = DefaultResolution)
+    public static void Install(byte[] zipBytes, string gameDir, string glideResolution) =>
+        Install(zipBytes, gameDir, new DisplayOptions { Resolution = glideResolution });
+
+    public static void Install(byte[] zipBytes, string gameDir, DisplayOptions? display = null)
     {
+        display ??= new DisplayOptions();
         using var zip = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
         foreach (var (source, target) in Files)
         {
@@ -86,8 +91,59 @@ public static class DgVoodoo
         var confEntry = zip.GetEntry("dgVoodoo.conf") ?? throw new PatchException("dgVoodoo.conf ontbreekt in de zip.");
         var confPath = Path.Combine(gameDir, "dgVoodoo.conf");
         confEntry.ExtractToFile(confPath, overwrite: true);
-        // Alleen [Glide] Resolution: het spel tekent via Glide. [DirectX] Resolution (menu's via DirectDraw) blijft unforced.
-        foreach (var (section, key, value) in Settings.Append(("Glide", "Resolution", glideResolution)))
+        foreach (var (section, key, value) in Settings.Concat(display.Settings))
             IniFile.Update(confPath, s => s.Equals(section, StringComparison.OrdinalIgnoreCase), key, _ => " " + value, firstSectionOnly: true);
     }
+}
+
+/// <summary>Hoe het spel op het scherm komt (<c>--display</c>).</summary>
+public enum DisplayMode
+{
+    /// <summary>Randloos venster op schermgrootte ("fake fullscreen"); standaard, werkt goed met alt-tab en Proton.</summary>
+    Borderless,
+    /// <summary>Echt (exclusief) volledig scherm.</summary>
+    Fullscreen,
+    /// <summary>Venster met rand, standaard 2x de spelresolutie.</summary>
+    Window,
+}
+
+/// <summary>Beeldinstellingen die de patcher in dgVoodoo.conf zet. Achtergrond: docs/TECHNISCH.md, "Beeldopties".</summary>
+public sealed record DisplayOptions
+{
+    /// <summary>Renderresolutie in een venster: 2x (1280x960, of 1712x960 met 16:9) past op een 1080p-scherm.</summary>
+    public const string DefaultWindowResolution = "2x";
+    public const string DefaultAntialiasing = "4x";
+
+    public DisplayMode Mode { get; init; } = DisplayMode.Borderless;
+    /// <summary><c>[Glide] Resolution</c>; null = standaard voor <see cref="Mode"/>.</summary>
+    public string? Resolution { get; init; }
+    /// <summary>Maximaal aantal beelden per seconde; 0 = geen limiet.</summary>
+    public int FpsLimit { get; init; }
+    public bool VSync { get; init; } = true;
+    /// <summary>MSAA: "off", "2x", "4x", "8x" of "16x".</summary>
+    public string Antialiasing { get; init; } = DefaultAntialiasing;
+    /// <summary>CRT-effect (scanlines, kromming) van dgVoodoo.</summary>
+    public bool Crt { get; init; }
+
+    public string GlideResolution => Resolution ?? (Mode == DisplayMode.Window ? DefaultWindowResolution : DgVoodoo.DefaultResolution);
+
+    public static DisplayMode? ParseMode(string value) => value.ToLowerInvariant() switch
+    {
+        "borderless" or "randloos" => DisplayMode.Borderless,
+        "fullscreen" or "exclusive" => DisplayMode.Fullscreen,
+        "window" or "windowed" or "venster" => DisplayMode.Window,
+        _ => null,
+    };
+
+    internal IEnumerable<(string Section, string Key, string Value)> Settings =>
+    [
+        ("General", "FullScreenMode", Mode == DisplayMode.Window ? "false" : "true"),
+        ("GeneralExt", "FullscreenAttributes", Mode == DisplayMode.Fullscreen ? "" : "fake"), // ook alt-enter vanuit een venster wordt randloos
+        ("General", "ScalingMode", Crt ? "stretched_ar_crt" : "stretched_ar"), // beeldvullend met behoud van de beeldverhouding
+        ("GeneralExt", "FPSLimit", FpsLimit.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        ("Glide", "ForceVerticalSync", VSync ? "true" : "false"),
+        ("Glide", "Antialiasing", Antialiasing),
+        // Alleen [Glide] Resolution: het spel tekent via Glide. [DirectX] Resolution (menu's via DirectDraw) blijft unforced.
+        ("Glide", "Resolution", GlideResolution),
+    ];
 }

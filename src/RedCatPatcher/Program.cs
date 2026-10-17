@@ -26,7 +26,12 @@ if (options.ShowHelp)
           --controller               Gamepad-indeling: stick beweegt, A springen, B ontwijken, X schieten,
                                      LB/RB wapen wisselen, Back scores, Start menu (alleen in het spel, niet in het menu)
           --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
-                                     scherm toelaat). Bijv. 2x, 3x, desktop, 1920x1080, of unforced (origineel)
+                                     scherm toelaat; in een venster "2x"). Bijv. 3x, desktop, 1920x1080, of unforced
+          --display <modus>          borderless (standaard: randloos schermvullend), fullscreen (exclusief) of window
+          --fps-limit <n>            Maximaal n beelden per seconde (standaard 0: geen limiet, alleen vsync)
+          --no-vsync                 Verticale synchronisatie uit (kan beeldscheuren geven)
+          --msaa <off|2x|4x|8x|16x>  Anti-aliasing van randen (standaard 4x)
+          --crt                      CRT-effect: scanlines en een licht gebold beeld, zoals een oude monitor
           --shortcut / --no-shortcut Snelkoppeling op het bureaublad en in het Startmenu (Linux: programmamenu)
           --steam / --no-steam       RedCat toevoegen aan Steam als niet-Steam-game (Linux: met Proton)
           --steam-dir <map>          Steam-map, als de patcher die niet zelf vindt
@@ -150,8 +155,10 @@ try
     {
         Console.WriteLine();
         var zip = await DgVoodoo.GetZipAsync(options.DgVoodooZip, msg => Console.WriteLine(msg));
-        DgVoodoo.Install(zip, outDir, options.Resolution);
-        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, schermvullend {options.Widescreen?.Name ?? "4:3"}, renderresolutie {options.Resolution})");
+        var display = options.Display;
+        DgVoodoo.Install(zip, outDir, display);
+        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, {display.Mode switch { DisplayMode.Window => "venster", DisplayMode.Fullscreen => "volledig scherm", _ => "schermvullend" }} {options.Widescreen?.Name ?? "4:3"}, renderresolutie {display.GlideResolution})");
+        Console.WriteLine($"       MSAA {display.Antialiasing}, vsync {(display.VSync ? "aan" : "uit")}, fps-limiet {(display.FpsLimit == 0 ? "geen" : display.FpsLimit)}{(display.Crt ? ", CRT-effect" : "")}");
     }
 
     // 7. Snelkoppelingen en Steam (vraagt interactief j/N als er geen optie is opgegeven)
@@ -261,7 +268,7 @@ static void Pause(bool interactive)
 sealed class Options
 {
     public string? Disc, Out, DgVoodooZip;
-    public string Resolution = DgVoodoo.DefaultResolution;
+    public DisplayOptions Display = new();
     public bool NoDgVoodoo, Yes, ShowHelp, Wasd, Controller, DebugLogs;
     public readonly List<string> Updates = [];
     public Widescreen? Widescreen;
@@ -293,9 +300,10 @@ sealed class Options
                 case "--controller": o.Controller = true; break;
                 case "--debug-logs": o.DebugLogs = true; break;
                 case "--resolution":
-                    o.Resolution = Next().ToLowerInvariant();
-                    if (!DgVoodoo.IsValidResolution(o.Resolution))
-                        throw new PatchException($"--resolution: onbekende waarde '{o.Resolution}' (bijv. max, 2x, desktop, 1920x1080 of unforced).");
+                    var resolution = Next().ToLowerInvariant();
+                    if (!DgVoodoo.IsValidResolution(resolution))
+                        throw new PatchException($"--resolution: onbekende waarde '{resolution}' (bijv. max, 2x, desktop, 1920x1080 of unforced).");
+                    o.Display = o.Display with { Resolution = resolution };
                     break;
                 case "--shortcut": o.Shortcuts.Shortcut = true; break;
                 case "--no-shortcut": o.Shortcuts.Shortcut = false; break;
@@ -303,6 +311,20 @@ sealed class Options
                 case "--no-steam": o.Shortcuts.Steam = false; break;
                 case "--steam-dir": o.Shortcuts.SteamDir = Next(); break;
                 case "--proton": o.Shortcuts.Proton = Next(); break;
+                case "--display":
+                    var mode = Next();
+                    o.Display = o.Display with { Mode = DisplayOptions.ParseMode(mode) ?? throw new PatchException($"--display: onbekende modus '{mode}' (kies borderless, fullscreen of window).") };
+                    break;
+                case "--fps-limit":
+                    var fps = Next();
+                    o.Display = o.Display with { FpsLimit = int.TryParse(fps, out int n) && n is >= 0 and <= 1000 ? n : throw new PatchException($"--fps-limit: '{fps}' is geen getal van 0 tot 1000.") };
+                    break;
+                case "--no-vsync": o.Display = o.Display with { VSync = false }; break;
+                case "--msaa":
+                    var msaa = Next().ToLowerInvariant();
+                    o.Display = o.Display with { Antialiasing = DgVoodoo.AntialiasingValues.Contains(msaa) ? msaa : throw new PatchException($"--msaa: onbekende waarde '{msaa}' (kies off, 2x, 4x, 8x of 16x).") };
+                    break;
+                case "--crt": o.Display = o.Display with { Crt = true }; break;
                 case "--yes" or "-y": o.Yes = true; break;
                 case "--help" or "-h" or "/?": o.ShowHelp = true; break;
                 default: o.Disc = args[i]; break;

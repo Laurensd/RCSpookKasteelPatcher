@@ -22,7 +22,8 @@ Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--debug-logs]
+              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--display <modus>]
+              [--fps-limit <n>] [--no-vsync] [--msaa <off|2x|4x|8x|16x>] [--crt] [--debug-logs]
               [--shortcut|--no-shortcut] [--steam|--no-steam] [--steam-dir <map>] [--proton <naam>] [--yes]
 ```
 
@@ -51,13 +52,18 @@ spelbestand of een onbekende update, dan stopt hij zonder te patchen en meldt hi
 
 ### Extra opties
 
-Deze zijn standaard uit (behalve de renderresolutie); zet ze aan met een vlag (of maak een snelkoppeling naar de patcher met de vlag erachter).
+Deze zijn standaard uit (behalve de renderresolutie, vsync en 4x MSAA); zet ze aan met een vlag (of maak een snelkoppeling naar de patcher met de vlag erachter).
 
 | Vlag | Wat het doet |
 |---|---|
 | `--widescreen` | Breedbeeld 16:9 (856×480) in plaats van 4:3: breder beeld met dezelfde verticale kijkhoek, HUD-iconen niet uitgerekt en rechts uitgelijnd |
 | `--widescreen 16:10` | Hetzelfde voor 16:10-schermen (640×400), bijvoorbeeld de Steam Deck |
 | `--resolution <waarde>` | Interne renderresolutie (standaard `max`: het spel wordt op schermresolutie gerenderd in plaats van op 640×480 en daarna opgerekt, dus veel scherper). Andere waarden: `2x`, `3x`, `desktop`, `1920x1080`, of `unforced` voor het originele (wazige) beeld. Kies `2x` of `unforced` als het spel op een zwakke GPU hapert |
+| `--display window` | Spelen in een venster (standaard 2× de spelresolutie, 1280×960). `--display fullscreen` geeft echt (exclusief) volledig scherm; standaard is `borderless`, een randloos venster op schermgrootte dat goed werkt met alt-tab en Proton |
+| `--fps-limit <n>` | Maximaal n beelden per seconde, bijvoorbeeld `60`. Standaard geen limiet: vsync houdt het beeld gelijk met het scherm. Het spel rekent met de echte tijd, dus ook op 144 of 240 Hz lopen beweging en sprongen even snel |
+| `--no-vsync` | Verticale synchronisatie uit. Kan beeldscheuren geven; combineer eventueel met `--fps-limit` |
+| `--msaa <waarde>` | Anti-aliasing (gladde randen): `off`, `2x`, `4x` (standaard), `8x` of `16x` |
+| `--crt` | Retro-effect van een oude beeldbuis: scanlines en een licht gebold beeld |
 | `--wasd` | W/A/S/D in plaats van de pijltjestoetsen (vooruit, links draaien, achteruit, rechts draaien). Geldt voor nieuwe spelers en voor de knop Standaard bij Instellingen → Instellen |
 | `--controller` | Gamepad-indeling voor in het spel (zie hieronder) |
 | `--debug-logs` | Logbestanden van spel en menu aan laten (`AdamDebug*.log`, `Sound.log`, `Levels\*.log`, `MenuTrac.log`, ...). Handig als je een probleem wilt uitzoeken of melden |
@@ -66,6 +72,7 @@ Bijvoorbeeld:
 
 ```
 RedCatPatcher.exe --widescreen --wasd
+RedCatPatcher.exe --display window --msaa 8x
 ```
 
 Spelers die al eigen toetsen hadden ingesteld houden die; kies bij Instellingen → Instellen op Standaard om WASD te krijgen.
