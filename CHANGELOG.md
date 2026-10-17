@@ -5,6 +5,8 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-17
+
 ### Toegevoegd
 - Optie `--start-level <1-5>`: start het gepatchte spel direct in een gekozen Griezelplek met een testspeler, zonder menu. Om bijvoorbeeld de crash bij de muur van kratten in level 4 (De Grotten) te testen.
 - Optie `--widescreen [16:9|16:10]`: breedbeeld (856×480 of 640×400) met een breder blikveld en een HUD dat niet wordt uitgerekt. Standaard 16:9.
@@ -48,5 +50,6 @@ Eerste release. Maakt de cd-rom van RedCat Spookkasteel v1.0.0 (Davilex, 2000) s
 - **Cd vereist.** Niet meer: alles staat lokaal en er zijn geen registersleutels nodig.
 - Grafische fouten met de oude DirectX/Glide-drivers op moderne videokaarten, zoals negatief gerapporteerd videogeheugen, opgelost met dgVoodoo2.
 
-[Unreleased]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Laurensd/RCSpookKasteelPatcher/releases/tag/v0.1.0
