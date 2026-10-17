@@ -42,6 +42,15 @@ public static class GamePatches
                  Dfm(Ident("Caption"), VaString, Str("frmCoolDialog "), Ident("ClientHeight"))),
              new(Dfm(Ident("Position"), VaIdent, Str("poDesktopCenter")),
                  Dfm(Ident("Position"), VaIdent, Str("poScreenCenter")))]),
+
+        // Het menu zet het bureaublad met ChangeDisplaySettings op 800x600; andere monitoren schuiven dan op en
+        // alt-tab gaat mis. Met de verborgen instelling settings\menu.ini [GENERAL] Windowed=1 slaat het menu die
+        // wissel over en tekent het zich gecentreerd op het hoofdscherm. Fix: na die controle (call, test al,al,
+        // jne) altijd overslaan (jne -> jmp), ongeacht menu.ini.
+        new("menu-no-modeswitch", "RcHcMenu.dat",
+            "Menu laat de schermresolutie ongemoeid (geen wissel naar 800x600)",
+            [new(Hex("e8 07 f5 ff ff 84 c0 75 05 e8 2a 27 f4 ff"),
+                 Hex("e8 07 f5 ff ff 84 c0 eb 05 e8 2a 27 f4 ff"))]),
     ];
 
     private static byte[] Hex(string s) => Convert.FromHexString(s.Replace(" ", ""));

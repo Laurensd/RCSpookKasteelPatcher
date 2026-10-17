@@ -57,6 +57,7 @@ Het menu probeert met `ChangeDisplaySettings` achtereenvolgens 800×600 in 24, 1
 24-bit bestaat niet meer, dus het wordt 16-bit. Windows emuleert die modus met de compat-shim
 `DWM8And16BitMitigation`, die de Program Compatibility Assistant zelf in het register zet.
 Fix: de eerste poging gebruikt 32 bit (`mov cx,18h` → `mov cx,20h`).
+Sinds Fix 4 wisselt het menu helemaal niet meer van modus; deze patch blijft staan voor wie Fix 4 terugdraait.
 
 ## Fix 3 — dialogen buiten beeld (`RcHcMenu.dat`)
 
@@ -67,6 +68,45 @@ Het menu lijkt dan vast te lopen, omdat het modale venster onzichtbaar is.
 
 Fix in de binaire DFM-resource: `poDesktopCenter` wordt `poScreenCenter`. Dat is één byte korter. Om de resource even lang te
 houden, krijgt de `Caption` van het basisformulier één spatie extra; die Caption wordt door elke subklasse overschreven.
+
+## Fix 4 — menu wisselt niet meer van resolutie (`RcHcMenu.dat`)
+
+Symptoom: bij het starten zet het menu het hoofdscherm op 800×600. Andere monitoren schuiven dan mee (Windows legt
+de desktop opnieuw aan), vensters springen naar een ander scherm en alt-tab naar het bureaublad toont alles op
+800×600. Omdat het menu `ChangeDisplaySettings(&dm, 0)` gebruikt (zonder `CDS_FULLSCREEN`), zet Windows de resolutie
+niet terug als het menu crasht of wordt afgeschoten; alleen een nette afsluiting roept `ChangeDisplaySettings(NULL, 0)` aan.
+
+Analyse. Het opstarten van het hoofdformulier (`0x56DF88`) doet:
+
+```
+call  0x56D494      ; leest settings\menu.ini [GENERAL] Windowed (TIniFile.ReadBool, standaard False)
+test  al, al
+jne   0x56DF96      ; Windowed=1: modus-wissel overslaan
+call  0x4B06C0      ; 800x600 in 24/16/15/32 bit proberen (zie Fix 2)
+```
+
+De ontwikkelaars hadden dus al een verborgen venstermodus. Het menu tekent zich daarin precies zo, maar gecentreerd: het
+hoofdformulier (`TfrmMain`, `bsNone`) is schermvullend en zet de 800×600-inhoud in het midden; `RedCat.exe` (het
+zwarte `MOTOR`-venster) vult de rest. Er is geen tweede plek die de resolutie wijzigt: `ChangeDisplaySettingsA` wordt
+alleen aangeroepen vanuit `0x4B0560` (via `0x4B06C0`) en de terugzet-functie `0x4B05F4`. Het menu gebruikt geen
+DirectDraw (geen `ddraw`-import, alleen GDI), dus dgVoodoo kan het niet opschalen.
+
+Fix: `jne` → `jmp` (`75 05` → `EB 05`), zodat de wissel altijd wordt overgeslagen, ook zonder `Windowed=1` in
+`menu.ini`. De terugzet-aanroep bij afsluiten blijft staan: zonder eerdere wissel laadt die de resolutie uit het
+register, die al actief is. De 32-bit-patch van Fix 2 wordt hierdoor niet meer uitgevoerd, maar is onschadelijk.
+
+Gevolgen:
+
+- Het menu blijft 800×600 pixels. Op een 4K-scherm (100% schaal) is dat een klein vlak in het midden; Windows
+  schaalt het programma niet, omdat het als DPI-onbewust de systeem-DPI krijgt. Bij 150% of 200% schaal rekt Windows
+  het menu wel op (wazig, maar groter).
+- De dialogen van Fix 3 (`poScreenCenter`) centreren op het hoofdscherm en vallen dus midden in het menu.
+- Het spel (`RcHcGame.dat`) start pas nadat het menu is afgesloten en gaat via dgVoodoo (fake fullscreen) zelf
+  schermvullend. Daar verandert niets aan; met de oude modus-wissel stond de resolutie op dat moment ook al terug.
+
+Getest (Windows 11, 3840×2160 hoofdscherm met een 2560×1440-scherm erboven): het bureaublad blijft op 3840×2160 en
+het tweede scherm op zijn plek, het menu staat gecentreerd, het naamvenster in het midden ervan, en het eerste level
+draait schermvullend in 4:3. Met de originele `jne` wisselt het hoofdscherm naar 800×600 (ter vergelijking).
 
 ## dgVoodoo2
 
@@ -98,7 +138,7 @@ direct op een hogere resolutie; het spel merkt daar niets van (het ziet nog stee
 - Andere waarden worden ongewijzigd doorgegeven: `2x`/`3x` (veelvoud van de spelresolutie), `max_isf` (grootste
   gehele veelvoud dat past), `desktop`, een vaste resolutie zoals `1920x1080`, of `unforced` voor het originele beeld.
 - Alleen `[Glide]`: het spel zelf tekent via Glide. `[DirectX] Resolution` blijft `unforced`, want de menu's
-  (`RcHcMenu.dat`, DirectDraw) zijn 2D-plaatjes die daar niet scherper van worden.
+  (`RcHcMenu.dat`, GDI) zijn 2D-plaatjes die daar niet scherper van worden.
 - Getest (4K-scherm, 16:9): beeld en HUD kloppen op `2x` (1712x960) en `max` (3840x2153), ook het pauzemenu in het spel.
 - In een venster (`FullScreenMode = false`) bepaalt de geforceerde resolutie de venstergrootte; met `max` wordt het
   venster dus zo groot als het scherm. Gebruik daar `2x`.

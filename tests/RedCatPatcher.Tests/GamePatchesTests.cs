@@ -75,6 +75,17 @@ public class GamePatchesTests
     }
 
     [Fact]
+    public void MenuNoModeSwitchPatch_OnlyTurnsJneIntoJmp()
+    {
+        var r = GamePatches.All.Single(p => p.Id == "menu-no-modeswitch").Replacements.Single();
+        var diff = Enumerable.Range(0, r.Find.Length).Where(i => r.Find[i] != r.Replace[i]).ToList();
+        Assert.Equal([7], diff);
+        Assert.Equal(0x75, r.Find[7]);    // jne rel8
+        Assert.Equal(0xEB, r.Replace[7]); // jmp rel8, zelfde sprongdoel
+        Assert.Equal(r.Find[8], r.Replace[8]);
+    }
+
+    [Fact]
     public void DialogCenterPatch_ProducesValidDelphiIdentifiers()
     {
         var patch = GamePatches.All.Single(p => p.Id == "dialog-center");
