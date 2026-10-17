@@ -244,6 +244,40 @@ BasisSha256=...  ; ter controle van RedCatPatcher\basis
   daarom ook een regel met `Exe` = `RedCat.exe` in dezelfde map herkennen en die bijwerken (appid, Proton-keuze en
   speeltijd houden).
 
+## Proef GUI-framework (stap 4)
+
+Code en teststappen: [`spikes/launcher`](../spikes/launcher/README.md). Twee keer hetzelfde venster (Spelen, Afsluiten,
+XInput-controller), single-file win-x64, self-contained .NET 10. Gemeten op Windows 11 (17-10-2026), gemiddelde van
+vijf starts tot het venster getoond is:
+
+| | WinForms | Avalonia 12.1 + Fluent |
+|---|---|---|
+| Trimmen | Nee (`NETSDK1175`) | Ja, zonder trimwaarschuwingen (UI in code, geen XAML) |
+| Grootte, gecomprimeerd | 47 MB (107 MB zonder compressie) | 27 MB met ReadyToRun (20 MB zonder) |
+| Opstarttijd | 0,19 s (0,13 s zonder compressie) | 0,4 s met ReadyToRun (0,9 s zonder; `--software` 0,7 s) |
+| Tekenen | GDI via Wine's `user32`/`gdiplus` | Skia via ANGLE (Direct3D 11, onder Proton DXVK), terugval op software |
+| Platformen | Alleen Windows | Windows; native Linux kan later met dezelfde code |
+| Controller | Eigen XInput-poll (`xinput1_4.dll`), focus verplaatsen met `Focus()` | Idem, `Focus(NavigationMethod.Tab)` |
+| Spel starten | `Process.Start` vanuit `AppContext.BaseDirectory`, werkt | Idem, werkt |
+
+Bevindingen tot nu toe:
+
+- **Beide werken op Windows**: venster, focusrand, Enter op Spelen start `RedCat.exe` en sluit de launcher.
+- **Controller**: geen van beide frameworks leest zelf een gamepad. Een eigen XInput-poll van ~50 regels (gedeeld in
+  `Shared/Spike.cs`) is genoeg voor d-pad/stick, A en B; onder Steam Input komt de Deck-controller standaard als
+  XInput-pad binnen. Dit is dus geen onderscheid tussen de frameworks.
+- **Grootte en trimmen** pleiten voor Avalonia: getrimd 27 MB tegen 47 MB, en dezelfde trimbuild als de patcher. De
+  prijs is 0,2 s extra opstarttijd en native Skia/HarfBuzz/ANGLE-DLL's die bij de eerste start uitgepakt worden.
+- **Het grootste risico zit onder Proton bij Avalonia**: ANGLE op DXVK. Daarom heeft de proef `--software` om dat uit
+  te sluiten. WinForms leunt op Wine's eigen GDI en gdiplus; dat werkt doorgaans, maar ziet er gedateerd uit.
+
+Nog te testen (met de hand, zie de teststappen in de README): Linux-desktop onder Proton, Steam Deck in Game Mode
+(leesbaarheid op 1280×800, d-pad/A/B, of Steam de sessie vasthoudt nadat de launcher sluit).
+
+Voorlopige keuze: **Avalonia**, als het venster onder Proton zonder `--software` tekent en de controller werkt op de Deck.
+Tekent het alleen met `--software`, dan nog steeds Avalonia met software-rendering als standaard (een launcher heeft geen
+GPU nodig). Werkt Avalonia onder Proton helemaal niet, dan WinForms ongetrimd.
+
 ## Een echt menu in het spel?
 
 Een menu tijdens het spel (zoals een debugmenu of een overlay) vraagt native code in het spelproces:
@@ -286,7 +320,8 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 3. **De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**; `BackupUserData` neemt het keuzebestand mee.
    Bestaande opties blijven werken.
 4. **Proef: GUI-framework onder Proton** en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
-   Pas daarna het framework kiezen.
+   Pas daarna het framework kiezen. Gebouwd, Windows gemeten; Proton en Deck nog met de hand testen (zie "Proef
+   GUI-framework").
 5. **Launcher, tabblad Spelen**: groep 2 (breedbeeld, besturing, controller, beeld, logs) via "opbouwen uit de basis",
    plus de stand "direct spelen" zonder venster.
 6. **Snelkoppelingen en Steam naar de launcher**, met herkenning van de oude regel naar `RedCat.exe`.
