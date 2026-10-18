@@ -185,7 +185,12 @@ sealed class MainWindow : Window
                 "Modern: a layout like today's games, with weapon switching, scores and the menu on the controller. " +
                 "Classic: as in the original, the stick and four buttons. Works in the game; the menus use mouse and keyboard.",
                 [("Modern", true), ("Classic", false)],
-                x => x.Controller, (x, v) => x with { Controller = v }));
+                x => x.Controller, (x, v) => x with { Controller = v }),
+            OptionRow.Create("Controller in menus",
+                "The game's menus don't support a controller. On: in the menus the left stick moves the mouse pointer, " +
+                "A clicks, B is Esc and Start is Enter. The launcher keeps running in the background while you play.",
+                [("On", true), ("Off", false)],
+                x => x.MenuController, (x, v) => x with { MenuController = v }));
         AddCategory("Advanced", "Troubleshooting.", null,
             OptionRow.Create("Debug logs",
                 "Writes log files of the game and the menu to the game folder, to help track down problems.",
@@ -388,6 +393,9 @@ sealed class MainWindow : Window
         var error = await Task.Run(game.Play);
         if (error == null)
         {
+            // Verborgen blijven draaien voor de controller in de menu's
+            Hide();
+            await Task.Run(game.RunMenuController);
             Close();
             return;
         }

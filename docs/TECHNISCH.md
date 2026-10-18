@@ -446,9 +446,13 @@ de stick niets meer.
 
 ### Beperkingen en nog open
 
-- **Menu** (`RcHcMenu.dat`, Delphi): leest geen joystick. Op Windows met muis of toetsenbord bedienen; op de Steam Deck
-  werkt de standaardindeling van Steam (rechtertrackpad = muis, R2 = klikken). Een stick-als-muis-laag voor Windows hoort
-  bij route (b).
+- **Menu** (`RcHcMenu.dat`, Delphi): leest geen joystick en bestaat uit plaatjes om op te klikken. De launcher vult
+  dat aan (`RedCatLauncher/MenuPad.cs`, instelling "Controller in menus", standaard aan): na Play blijft hij verborgen
+  draaien tot `RedCat.exe` stopt, en zolang een venster van het menuproces op de voorgrond staat (procesnaam
+  `RcHcMenu.dat`), beweegt de linkerstick of d-pad de muis (`SetCursorPos`, kwadratische curve), klikt A
+  (`SendInput`), is B Escape en Start Enter. In het spel doet hij niets. Ook met `--spelen`. Geen DLL of hook in het
+  spel; onder Proton werken XInput en `SendInput` binnen het prefix. Op de Steam Deck blijft ook Steams eigen
+  trackpad-muis werken.
 - Stick is aan/uit (het zijn toetsen), d-pad, triggers en rechterstick doen niets. Steam Input kan de d-pad op de
   linkerstick leggen.
 - Sluit de controller aan vóór het starten en raak de stick niet aan tijdens het laden (midden wordt dan bepaald).

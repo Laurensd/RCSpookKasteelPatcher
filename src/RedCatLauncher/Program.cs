@@ -26,7 +26,11 @@ static class Program
         if (args.Contains("--spelen") || args.Contains("--play"))
         {
             error = game.Play();
-            if (error == null) return 0;
+            if (error == null)
+            {
+                game.RunMenuController();
+                return 0;
+            }
         }
 
         Win32RenderingMode[] rendering = args.Contains("--software")
