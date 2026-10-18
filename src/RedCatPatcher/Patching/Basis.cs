@@ -26,6 +26,13 @@ public static class Basis
         Path.Combine("settings", "HUDIcon.ini"),
     ];
 
+    /// <summary>
+    /// Versie van wat <see cref="Build"/> maakt. Ophogen bij een nieuwe of gewijzigde fix: de launcher bouwt de bestanden
+    /// dan opnieuw op, ook als de keuze niet veranderd is (<c>Revision</c> in <c>[Toegepast]</c>).
+    /// 2: joystick op elk ID (<see cref="JoystickSearch"/>).
+    /// </summary>
+    public const int Revision = 2;
+
     public static string DirOf(string gameDir) => Path.Combine(gameDir, DirName);
 
     /// <summary>Kopieert de bestanden naar de basis en geeft de hash van de basis terug. Vóór de fixes aanroepen.</summary>
@@ -69,6 +76,7 @@ public static class Basis
         if (choice.Widescreen is { } wide) patches = patches.Concat(wide.Patches);
         foreach (var patch in patches)
             patch.Apply(files[patch.File], version.Build);
+        JoystickSearch.Apply(files[JoystickSearch.File]);
 
         // Zonder WASD en controller is de tabel die van de basis (Controller.Original).
         if (choice.Wasd || choice.Controller)

@@ -451,9 +451,14 @@ de stick niets meer.
   bij route (b).
 - Stick is aan/uit (het zijn toetsen), d-pad, triggers en rechterstick doen niets. Steam Input kan de d-pad op de
   linkerstick leggen.
-- Sluit de controller aan vóór het starten en raak de stick niet aan tijdens het laden (midden wordt dan bepaald). Het spel
-  kijkt alleen naar joystick-ID 0 en 1; wordt een controller niet gezien, kies hem dan als voorkeursapparaat in
-  `joy.cpl` (Geavanceerd).
+- Sluit de controller aan vóór het starten en raak de stick niet aan tijdens het laden (midden wordt dan bepaald).
+- **Joystick-ID (fix, `Patching/JoystickSearch.cs`).** Het origineel probeert alleen ID 0 en 1. Windows nummert
+  controllers in winmm niet altijd vanaf 0: met virtuele gamepads (Steam, Oculus) of eerder aangesloten controllers
+  stond een Xbox-controller op een testsysteem op ID 2 (`joyGetPosEx` op 0 en 1: fout 165, `JOYERR_UNPLUGGED`), en
+  zag het spel hem nooit. De fix vervangt de twee pogingen (1.0.0: `0x5A5A30`–`0x5A5A9D`, 109 bytes) door een lus over
+  ID 0–15 met `ebp` als teller; de eerste ID die antwoordt komt in `[esi]`, waar de code per frame (`0x5A6030`) hem
+  leest. Gevonden aan de structuur, met het IAT-adres van `joyGetPosEx` als jokertekens, zoals de joysticktabel.
+  Een nieuwe fix verhoogt `Basis.Revision`; de launcher bouwt de bestanden dan bij de volgende keer Play opnieuw op.
 - De knoppen volgen de standaardtoetsen. Wie in het menu vooruit/schieten/springen/ontwijken op een andere toets zet,
   verliest die functie op de controller.
 - Niet getest met een echte controller (geen beschikbaar bij het bouwen); de werking volgt uit de disassembly hierboven.
