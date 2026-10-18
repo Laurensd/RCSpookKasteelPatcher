@@ -76,12 +76,17 @@ public sealed record Choice
 
 /// <summary>
 /// <c>RedCatLauncher.ini</c> in de spelmap: wat de speler wil (<c>[Keuze]</c>) en wat er nu in de bestanden staat
-/// (<c>[Toegepast]</c>, met de hash van de basis). De patcher en de launcher schrijven het allebei.
+/// (<c>[Toegepast]</c>, met de hash van de basis). De patcher en de launcher schrijven het allebei. Alleen de launcher
+/// schrijft <c>[Testen]</c> (<see cref="TestOptions"/>).
 /// </summary>
 public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisSha256, int Revision = Basis.Revision)
 {
     public const string FileName = "RedCatLauncher.ini";
-    private const string WantedSection = "Keuze", AppliedSection = "Toegepast", BasisKey = "BasisSha256", RevisionKey = "Revision";
+    private const string WantedSection = "Keuze", AppliedSection = "Toegepast", TestingSection = "Testen",
+        BasisKey = "BasisSha256", RevisionKey = "Revision";
+
+    /// <summary>Het tabblad Testing van de launcher; alleen in het bestand als er iets aan staat.</summary>
+    public TestOptions Testing { get; init; } = new();
 
     /// <summary>Het keuzebestand, of null als het er niet is (gepatcht met een oudere patcher).</summary>
     public static LauncherIni? Read(string gameDir)
@@ -94,21 +99,25 @@ public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisS
             ini.TryGetValue(AppliedSection, out var applied) ? Choice.FromIni(applied) : null,
             applied != null && applied.TryGetValue(BasisKey, out var sha) && sha.Length > 0 ? sha : null,
             // Zonder Revision: geschreven vóór revisie 2
-            applied != null && applied.TryGetValue(RevisionKey, out var revision) && int.TryParse(revision, out int r) ? r : 1);
+            applied != null && applied.TryGetValue(RevisionKey, out var revision) && int.TryParse(revision, out int r) ? r : 1)
+        {
+            Testing = ini.TryGetValue(TestingSection, out var testing) ? TestOptions.FromIni(testing) : new(),
+        };
     }
 
     public void Write(string gameDir)
     {
         var text = new StringBuilder();
         text.Append("; RedCat Spookkasteel: keuze van de launcher. Zie docs/LAUNCHER.md.\r\n");
-        void Section(string name, Choice? choice, string comment, params (string, string)[] extra)
+        void Section(string name, IEnumerable<(string, string)>? values, string comment, params (string, string)[] extra)
         {
-            if (choice == null) return;
+            if (values == null) return;
             text.Append($"\r\n; {comment}\r\n[{name}]\r\n");
-            foreach (var (key, value) in choice.ToIni().Concat(extra)) text.Append($"{key}={value}\r\n");
+            foreach (var (key, value) in values.Concat(extra)) text.Append($"{key}={value}\r\n");
         }
-        Section(WantedSection, Wanted, "Wat de speler wil (launcher of patcher)");
-        Section(AppliedSection, Applied, "Wat er nu in de spelbestanden staat; niet zelf aanpassen",
+        Section(WantedSection, Wanted?.ToIni(), "Wat de speler wil (launcher of patcher)");
+        Section(TestingSection, Testing.IsDefault ? null : Testing.ToIni(), "Tabblad Testing van de launcher; opnieuw patchen zet dit terug");
+        Section(AppliedSection, Applied?.ToIni(), "Wat er nu in de spelbestanden staat; niet zelf aanpassen",
             [.. BasisSha256 == null ? [] : new[] { (BasisKey, BasisSha256) }, (RevisionKey, Revision.ToString(CultureInfo.InvariantCulture))]);
 
         var path = Path.Combine(gameDir, FileName);

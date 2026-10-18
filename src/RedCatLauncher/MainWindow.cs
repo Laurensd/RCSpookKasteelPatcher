@@ -13,11 +13,11 @@ using RedCatPatcher.Patching;
 namespace RedCatLauncher;
 
 /// <summary>
-/// Het startscherm: bovenaan een knop per categorie (Display, Graphics, Controls, Advanced), daaronder één regel per
-/// instelling van die categorie, onderaan Play en Quit. Te bedienen met muis, toetsenbord of controller: omhoog/omlaag
+/// Het startscherm: bovenaan een knop per categorie (Display, Graphics, Controls, Advanced, Testing), daaronder één
+/// regel per instelling of actie van die categorie, onderaan Play en Quit. Te bedienen met muis, toetsenbord of controller: omhoog/omlaag
 /// kiest een regel (boven de eerste regel ligt de tabbalk), links/rechts (of klikken, A) wisselt de waarde of de
 /// categorie, LB/RB of PgUp/PgDn wisselt overal de categorie, B/Esc sluit, Start speelt.
-/// De keuze komt meteen in RedCatLauncher.ini [Keuze]; toegepast wordt pas bij Play.
+/// De keuze komt meteen in RedCatLauncher.ini [Keuze] (Testing in [Testen]); toegepast wordt pas bij Play.
 /// </summary>
 sealed class MainWindow : Window
 {
@@ -36,6 +36,7 @@ sealed class MainWindow : Window
     readonly Bindings bindings = new(Dim);
     PixelSize screen = new(1920, 1080);
     Choice choice;
+    TestOptions testing;
     Category? current;
     Control? focused;
     bool busy;
@@ -44,6 +45,7 @@ sealed class MainWindow : Window
     {
         this.game = game;
         choice = game.Wanted;
+        testing = game.Testing;
         Title = "RedCat Spookkasteel";
         Width = 760;
         Height = 760;
@@ -62,7 +64,8 @@ sealed class MainWindow : Window
         quit = MakeButton("Quit", 160);
         play.Click += (_, _) => Play();
         quit.Click += (_, _) => Close();
-        play.GotFocus += (_, _) => OnFocus(play, game.NeedsApply ? "Applies the changed settings and starts the game." : "Starts the game.");
+        play.GotFocus += (_, _) => OnFocus(play, (game.NeedsApply ? "Applies the changed settings and starts " : "Starts ") +
+            (game.CanChoose && testing.StartLevel is { } level ? $"level {LevelName(level)} directly (Testing tab)." : "the game."));
         quit.GotFocus += (_, _) => OnFocus(quit, "Closes the launcher without playing. Your settings are kept.");
 
         var tabs = new UniformGrid { Rows = 1, Margin = new Thickness(0, 0, 0, 10), IsVisible = categories.Count > 0 };
@@ -127,7 +130,7 @@ sealed class MainWindow : Window
     void AddCategories()
     {
         AddCategory("Display", "Aspect ratio, display mode and resolution.", null,
-            OptionRow.Create("Aspect ratio",
+            Option("Aspect ratio",
                 "Widescreen gives a wider field of view and a HUD that isn't stretched. 16:10 fits the Steam Deck.",
                 [("4:3 (original)", (Widescreen?)null), ("16:9 widescreen", Widescreen.Wide16x9), ("16:10 widescreen", Widescreen.Wide16x10)],
                 x => x.Widescreen,
@@ -138,7 +141,7 @@ sealed class MainWindow : Window
                     Display = x.Display.GlideResolution.Contains('x') && char.IsDigit(x.Display.GlideResolution[^1]) && x.Display.Mode != DisplayMode.Window
                         ? x.Display with { Resolution = Resolutions.Default(x.Display.Mode) } : x.Display,
                 }),
-            OptionRow.Create("Display mode",
+            Option("Display mode",
                 "Borderless works best with Alt+Tab and under Proton. Fullscreen switches the screen mode. Windowed shows the game in a window.",
                 [("Borderless", DisplayMode.Borderless), ("Fullscreen", DisplayMode.Fullscreen), ("Windowed", DisplayMode.Window)],
                 x => x.Display.Mode,
@@ -149,57 +152,117 @@ sealed class MainWindow : Window
                         ? x.Display with { Mode = v }
                         : x.Display with { Mode = v, Resolution = Resolutions.Default(v) },
                 }),
-            OptionRow.Create("Resolution",
+            Option("Resolution",
                 "The resolution the game is drawn at; it is scaled to fill the screen. Native is the sharpest. " +
                 "Original is the game's own blurry look. Windowed: the size of the window.",
                 x => Resolutions.For(x, screen),
                 x => x.Display.GlideResolution, (x, v) => x with { Display = x.Display with { Resolution = v } }));
         AddCategory("Graphics", "Picture quality and frame rate.", null,
-            OptionRow.Create("Anti-aliasing",
+            Option("Anti-aliasing",
                 "Smooths jagged edges (MSAA). Higher settings ask more of the graphics card.",
                 DgVoodoo.AntialiasingValues.Select(v => (v == "off" ? "Off" : $"{v} MSAA", v)),
                 x => x.Display.Antialiasing, (x, v) => x with { Display = x.Display with { Antialiasing = v } }),
-            OptionRow.Create("Render scale",
+            Option("Render scale",
                 "Supersampling: draws the game at 2 to 4 times the resolution and scales it down to the screen. " +
                 "Even smoother edges, but much heavier on the graphics card.",
                 Resolutions.RenderScales,
                 x => x.Display.RenderScale, (x, v) => x with { Display = x.Display with { RenderScale = v } }),
-            OptionRow.Create("V-Sync",
+            Option("V-Sync",
                 "Turning V-Sync off can cause screen tearing.",
                 [("On", true), ("Off", false)],
                 x => x.Display.VSync, (x, v) => x with { Display = x.Display with { VSync = v } }),
-            OptionRow.Create("Frame rate limit",
+            Option("Frame rate limit",
                 "Maximum frames per second. Unlimited: only V-Sync limits the frame rate. The game itself runs at about 60.",
                 new[] { 0, 30, 40, 60, 90, 120, 144 }.Select(v => (v == 0 ? "Unlimited" : $"{v} fps", v)),
                 x => x.Display.FpsLimit, (x, v) => x with { Display = x.Display with { FpsLimit = v } }),
-            OptionRow.Create("CRT effect",
+            Option("CRT effect",
                 "Scanlines and a slightly curved picture, like an old monitor. Only visible in fullscreen.",
                 [("Off", false), ("On", true)],
                 x => x.Display.Crt, (x, v) => x with { Display = x.Display with { Crt = v } }));
         AddCategory("Controls", "Keyboard and controller layout.", bindings.View,
-            OptionRow.Create("Keyboard",
+            Option("Keyboard",
                 "Modern: move with W, A, S and D. Classic: the arrow keys, as in the original.",
                 [("Modern (WASD)", true), ("Classic (arrow keys)", false)],
                 x => x.Wasd, (x, v) => x with { Wasd = v }),
-            OptionRow.Create("Controller",
+            Option("Controller",
                 "Modern: a layout like today's games, with weapon switching, scores and the menu on the controller. " +
                 "Classic: as in the original, the stick and four buttons. Works in the game; the menus use mouse and keyboard.",
                 [("Modern", true), ("Classic", false)],
                 x => x.Controller, (x, v) => x with { Controller = v }),
-            OptionRow.Create("Controller in menus",
+            Option("Controller in menus",
                 "The game's menus don't support a controller. On: in the menus the left stick moves the mouse pointer, " +
                 "A clicks, B is Esc and Start is Enter. The launcher keeps running in the background while you play.",
                 [("On", true), ("Off", false)],
                 x => x.MenuController, (x, v) => x with { MenuController = v }));
         AddCategory("Advanced", "Troubleshooting.", null,
-            OptionRow.Create("Debug logs",
-                "Writes log files of the game and the menu to the game folder, to help track down problems.",
-                [("Off", false), ("On", true)],
+            Option("Debug logs",
+                "Writes log files of the game and the menu to the game folder, to help track down problems. " +
+                "Always on while a debug switch on the Testing tab is on.",
+                // Een [Debug]-schakelaar zet de logs toch aan (TestOptions.Effective)
+                _ => [(testing.Debug.Count > 0 ? "On (Testing tab)" : "Off", false), ("On", true)],
                 x => x.DebugLogs, (x, v) => x with { DebugLogs = v }));
+        AddCategory("Testing", "For testing: start a level directly, extra debug messages and the log files.", null,
+            [
+                Test("Start level",
+                    "Play starts this level directly, without the menu, as test player 10: your own players and their " +
+                    "progress are left alone. Off: Play starts the game with the menu, as usual.",
+                    StartLevel.Levels.Select((l, i) => ($"{i + 1} · {l.Name}", (int?)(i + 1))).Prepend(("Off", null)),
+                    t => t.StartLevel, (t, v) => t with { StartLevel = v }),
+                .. DebugSwitches.Select(d => Test(d.Label, d.Help + " Turns on the debug logs too.",
+                    [("Off", false), ("On", true)],
+                    t => t.Debug.Contains(d.Key), (t, v) => t.WithDebug(d.Key, v))),
+                OptionRow.Action("Clean up logs",
+                    "Deletes the log files of the game, the menu and the drivers from the game folder. Players, scores and settings are kept.",
+                    () =>
+                    {
+                        int count = DebugLogs.Clean(game.Dir);
+                        ShowStatus(count == 0 ? "No log files found." : count == 1 ? "1 log file deleted." : $"{count} log files deleted.");
+                    }),
+                OptionRow.Action("Open log folder",
+                    "Opens the game folder with the log files in the file manager (on Linux and the Steam Deck desktop " +
+                    "too, where possible). Most logs are in the game folder itself, the script logs in Levels.",
+                    () => FileManager.Open(game.Dir)),
+            ]);
         ShowAll();
     }
 
+    /// <summary>
+    /// De [Debug]-schakelaars van AdamWin.ini op het tabblad Testing, in de volgorde van <see cref="TestOptions.DebugKeys"/>.
+    /// Een nieuwe schakelaar (bijv. uit het onderzoek naar DebugSecretCommands, DebugKeys en DebugUseConsole) komt daar
+    /// en hier.
+    /// </summary>
+    static readonly (string Key, string Label, string Help)[] DebugSwitches =
+    [
+        ("DebugDriver", "Log graphics driver", "Writes the chosen graphics driver and screen mode to the debug log."),
+        ("DebugLoading", "Log loading", "Writes what the game loads, and when, to the debug log."),
+        ("DebugPlayerPosition", "Log player position", "Writes the player's position to the debug log every frame. The log grows quickly."),
+    ];
+
+    static string LevelName(int level) => $"{level} ({StartLevel.Levels[level - 1].Name})";
+
+    OptionRow Option<T>(string label, string help, IEnumerable<(string Text, T Value)> items, Func<Choice, T> get, Func<Choice, T, Choice> set)
+    {
+        var list = items.ToList();
+        return Option(label, help, _ => list, get, set);
+    }
+
+    /// <summary>Een regel van de keuze ([Keuze]).</summary>
+    OptionRow Option<T>(string label, string help, Func<Choice, IEnumerable<(string Text, T Value)>> items, Func<Choice, T> get, Func<Choice, T, Choice> set) =>
+        OptionRow.Create(label, help, items, get, set, () => choice, c => choice = c);
+
+    /// <summary>Een regel van het tabblad Testing ([Testen]).</summary>
+    OptionRow Test<T>(string label, string help, IEnumerable<(string Text, T Value)> items, Func<TestOptions, T> get, Func<TestOptions, T, TestOptions> set)
+    {
+        var list = items.ToList();
+        return OptionRow.Create(label, help, _ => list, get, set, () => testing, t => testing = t);
+    }
+
     void AddCategory(string name, string description, Control? extra, params OptionRow[] rows)
+    {
+        AddCategory(name, description, extra, (IEnumerable<OptionRow>)rows);
+    }
+
+    void AddCategory(string name, string description, Control? extra, IEnumerable<OptionRow> rows)
     {
         var category = new Category(new Button
         {
@@ -225,7 +288,7 @@ sealed class MainWindow : Window
     /// <summary>Alle regels opnieuw tonen: een keuze kan de waarden van andere regels veranderen (resolutie, render scale).</summary>
     void ShowAll()
     {
-        foreach (var row in categories.SelectMany(c => c.Rows)) row.Show(choice);
+        foreach (var row in categories.SelectMany(c => c.Rows)) row.Show();
         bindings.Show(choice);
     }
 
@@ -350,7 +413,7 @@ sealed class MainWindow : Window
     bool Sideways(int delta)
     {
         if (OnTab) SwitchCategory(delta);
-        else if (RowIndex >= 0) Change(current!.Rows[RowIndex], delta);
+        else if (RowIndex >= 0) { if (!current!.Rows[RowIndex].IsAction) Change(current.Rows[RowIndex], delta); }
         else (focused == play ? quit : play).Focus(NavigationMethod.Directional);
         return true;
     }
@@ -367,21 +430,32 @@ sealed class MainWindow : Window
         return true;
     }
 
+    /// <summary>Een waarde wisselen en bewaren, of een actie uitvoeren.</summary>
     void Change(OptionRow row, int delta)
     {
-        choice = row.Step(choice, delta);
+        if (row.IsAction)
+        {
+            try { row.Step(delta); }
+            catch (Exception e) when (GameFolder.IsExpected(e)) { ShowError(e.Message); }
+            return;
+        }
+        row.Step(delta);
         ShowAll();
         try
         {
-            game.Save(choice);
+            game.Save(choice, testing);
             UpdatePending();
         }
         catch (Exception e) when (GameFolder.IsExpected(e)) { ShowError($"Settings not saved: {e.Message}"); }
     }
 
     void UpdatePending() =>
-        ShowStatus(game.NeedsFixUpdate ? "A game fix is installed when you press Play."
-            : game.NeedsApply ? "Changed: applied when you press Play." : "");
+        ShowStatus(string.Join(" ", new[]
+        {
+            game.NeedsFixUpdate ? "A game fix is installed when you press Play."
+                : game.NeedsApply ? "Changed: applied when you press Play." : null,
+            testing.StartLevel is { } level ? $"Play starts level {LevelName(level)} directly (Testing tab)." : null,
+        }.OfType<string>()));
 
     async void Play()
     {
@@ -421,18 +495,23 @@ sealed class MainWindow : Window
 /// <summary>Een categorie: de knop op de tabbalk en de regels die eronder verschijnen.</summary>
 sealed record Category(Button Tab, List<OptionRow> Rows, StackPanel Panel);
 
-/// <summary>Eén instelling: een knop met het label links en de waarde rechts.</summary>
+/// <summary>
+/// Eén instelling: een knop met het label links en de waarde rechts. Of een actie (<see cref="IsAction"/>): klikken,
+/// A of Enter voert hem uit, links/rechts doet niets.
+/// </summary>
 sealed class OptionRow
 {
     public Button Button { get; }
     public string Help { get; }
+    public bool IsAction { get; }
     readonly TextBlock value = new() { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
-    readonly Func<Choice, string> text;
-    readonly Func<Choice, int, Choice> step;
+    readonly Func<string> text;
+    readonly Action<int> step;
 
-    OptionRow(string label, string help, Func<Choice, string> text, Func<Choice, int, Choice> step)
+    OptionRow(string label, string help, Func<string> text, Action<int> step, bool isAction = false)
     {
         Help = help;
+        IsAction = isAction;
         this.text = text;
         this.step = step;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -450,22 +529,15 @@ sealed class OptionRow
         };
     }
 
-    public static OptionRow Create<T>(string label, string help, IEnumerable<(string Text, T Value)> items,
-        Func<Choice, T> get, Func<Choice, T, Choice> set)
-    {
-        var list = items.ToList();
-        return Create(label, help, _ => list, get, set);
-    }
-
     /// <summary>
-    /// Een regel waarvan de waarden van de rest van de keuze afhangen (bijv. de resoluties van de weergave). Een waarde
-    /// die de speler of de patcher zelf heeft ingesteld en die niet in de lijst staat (bijv. max_isf), komt vooraan,
-    /// zodat hij niet zomaar verdwijnt.
+    /// Een regel van een waarde in de toestand van <paramref name="state"/> (de keuze of de testhulp). De waarden kunnen
+    /// van de rest van de toestand afhangen (bijv. de resoluties van de weergave). Een waarde die de speler of de patcher
+    /// zelf heeft ingesteld en die niet in de lijst staat (bijv. max_isf), komt vooraan, zodat hij niet zomaar verdwijnt.
     /// </summary>
-    public static OptionRow Create<T>(string label, string help, Func<Choice, IEnumerable<(string Text, T Value)>> items,
-        Func<Choice, T> get, Func<Choice, T, Choice> set)
+    public static OptionRow Create<TState, T>(string label, string help, Func<TState, IEnumerable<(string Text, T Value)>> items,
+        Func<TState, T> get, Func<TState, T, TState> set, Func<TState> state, Action<TState> update)
     {
-        (List<(string Text, T Value)> List, int Index) Current(Choice c)
+        (List<(string Text, T Value)> List, int Index) Current(TState c)
         {
             var list = items(c).ToList();
             var now = get(c);
@@ -474,11 +546,19 @@ sealed class OptionRow
             return (list, index);
         }
         return new OptionRow(label, help,
-            c => { var (list, index) = Current(c); return list[index].Text; },
-            (c, delta) => { var (list, index) = Current(c); return set(c, list[(index + delta + list.Count) % list.Count].Value); });
+            () => { var (list, index) = Current(state()); return list[index].Text; },
+            delta =>
+            {
+                var c = state();
+                var (list, index) = Current(c);
+                update(set(c, list[(index + delta + list.Count) % list.Count].Value));
+            });
     }
 
-    public Choice Step(Choice c, int delta) => step(c, delta);
+    public static OptionRow Action(string label, string help, Action run) =>
+        new(label, help, () => "›", _ => run(), isAction: true);
 
-    public void Show(Choice c) => value.Text = $"‹  {text(c)}  ›";
+    public void Step(int delta) => step(delta);
+
+    public void Show() => value.Text = IsAction ? text() : $"‹  {text()}  ›";
 }

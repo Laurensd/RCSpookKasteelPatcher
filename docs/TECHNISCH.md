@@ -628,7 +628,8 @@ Het menu geeft zijn keuze aan het spel door via `settings\Game.ini [Run]` (`Play
 
 `--start-level` (`Patching/StartLevel.cs`) schrijft `[Run]` met `StartSubLevelNumber` = het gekozen nummer en
 speler 10, kopieert `PlayerDef.ini` naar `Player10.ini` en start het spel. Het menu schrijft `[Run]` en de
-`Player%d.ini` vóór elk spel opnieuw, dus via `RedCat.exe` speel je daarna gewoon verder. Voortgang per speler staat in
+`Player%d.ini` vóór elk spel opnieuw, dus via `RedCat.exe` speel je daarna gewoon verder. De launcher doet hetzelfde
+met "Start level" op het tabblad Testing. Voortgang per speler staat in
 `Player%d.ini` (`[Level1] CurrentSubLevel`, `[SubLevel1_N] Completed`).
 
 Bekende crash: het opblazen van de muur in level 4 (De Grotten). De XP-update lost die op volgens de

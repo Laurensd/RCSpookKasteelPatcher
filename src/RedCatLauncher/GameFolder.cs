@@ -7,7 +7,7 @@ namespace RedCatLauncher;
 
 /// <summary>
 /// De spelmap naast de launcher: de keuze uit RedCatLauncher.ini lezen en bewaren, toepassen vanuit de basis als die
-/// afwijkt van wat er nu in de bestanden staat, en RedCat.exe starten.
+/// afwijkt van wat er nu in de bestanden staat, en RedCat.exe starten (of met een startlevel direct het spel).
 /// </summary>
 sealed class GameFolder(string dir)
 {
@@ -23,36 +23,64 @@ sealed class GameFolder(string dir)
 
     public Choice Wanted => ini?.Wanted ?? new Choice();
 
+    public TestOptions Testing => ini?.Testing ?? new TestOptions();
+
+    /// <summary>Wat er toegepast wordt: de keuze, met de logs aan als er een [Debug]-schakelaar aan staat.</summary>
+    Choice Effective => Testing.Effective(Wanted);
+
     /// <summary>De gekozen instellingen of een nieuwere fix (<see cref="Basis.Revision"/>) staan nog niet in de spelbestanden.</summary>
-    public bool NeedsApply => CanChoose && (ini!.Applied != ini.Wanted || ini.Revision < Basis.Revision);
+    public bool NeedsApply => CanChoose && (ini!.Applied != Effective || ini.Revision < Basis.Revision);
 
     /// <summary>Alleen een nieuwere fix staat nog niet in de spelbestanden; de keuze zelf is al toegepast.</summary>
-    public bool NeedsFixUpdate => NeedsApply && ini!.Applied == ini.Wanted;
+    public bool NeedsFixUpdate => NeedsApply && ini!.Applied == Effective;
 
-    /// <summary>Bewaart de keuze in [Keuze]; toegepast wordt pas bij het spelen.</summary>
-    public void Save(Choice wanted)
+    /// <summary>Bewaart de keuze in [Keuze] en de testhulp in [Testen]; toegepast wordt pas bij het spelen.</summary>
+    public void Save(Choice wanted, TestOptions testing)
     {
         if (!CanChoose) return;
-        ini = ini! with { Wanted = wanted };
+        ini = ini! with { Wanted = wanted, Testing = testing };
         ini.Write(dir);
     }
 
-    /// <summary>Bouwt de spelbestanden opnieuw op uit de basis als de keuze verschilt van [Toegepast].</summary>
+    /// <summary>
+    /// Bouwt de spelbestanden opnieuw op uit de basis als de keuze verschilt van [Toegepast], en zet de
+    /// [Debug]-schakelaars in AdamWin.ini (dat schrijft alleen wat anders is).
+    /// </summary>
     public void ApplyIfNeeded()
     {
-        if (!NeedsApply) return;
-        Basis.Apply(dir, ini!.Wanted!, ini.BasisSha256);
-        ini = ini with { Applied = ini.Wanted, Revision = Basis.Revision };
-        ini.Write(dir);
-        Log("Settings applied from the base copy");
+        if (!CanChoose) return;
+        if (NeedsApply)
+        {
+            var effective = Effective;
+            Basis.Apply(dir, effective, ini!.BasisSha256);
+            ini = ini with { Applied = effective, Revision = Basis.Revision };
+            ini.Write(dir);
+            Log("Settings applied from the base copy");
+        }
+        Testing.Apply(dir);
     }
 
     /// <summary>RedCat.exe zoals het laatst gestart is.</summary>
     public Process? Started { get; private set; }
 
+    /// <summary>Direct in een level gestart (tabblad Testing), zonder menu.</summary>
+    bool startedLevel;
+
+    /// <summary>
+    /// Start RedCat.exe, of met een startlevel direct het spel, net als <c>RedCatPatcher --start-level</c>
+    /// (<see cref="StartLevel"/>).
+    /// </summary>
     public void Start()
     {
         if (!HasGame) throw new PatchException($"{GameExe} not found in {dir}. Put the launcher in the game folder, next to {GameExe}.");
+        if (CanChoose && Testing.StartLevel is { } level)
+        {
+            StartLevel.Prepare(dir, level);
+            Started = StartLevel.Launch(dir);
+            startedLevel = true;
+            Log($"Started level {level} ({StartLevel.Levels[level - 1].Name}) directly");
+            return;
+        }
         Started = Process.Start(new ProcessStartInfo(Path.Combine(dir, GameExe)) { WorkingDirectory = dir, UseShellExecute = false });
     }
 
@@ -75,7 +103,8 @@ sealed class GameFolder(string dir)
     /// <summary>Na het starten: de controller in de menu's tot RedCat.exe stopt, als de speler dat wil.</summary>
     public void RunMenuController()
     {
-        if (Started != null && Wanted.MenuController) MenuPad.Run(Started);
+        // Zonder menu (startlevel) is er niets te doen
+        if (Started != null && !startedLevel && Wanted.MenuController) MenuPad.Run(Started);
     }
 
     public static bool IsExpected(Exception e) => e is PatchException or IOException or UnauthorizedAccessException or Win32Exception;

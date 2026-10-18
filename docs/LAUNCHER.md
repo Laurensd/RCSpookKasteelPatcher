@@ -152,6 +152,23 @@ code. `DebugFake*` laten het spel bewust crashen; die horen niet als gewone scha
 Herhaalbaar: INI-waarden, `0` of `1`, dus triviaal. Een herinstallatie zet `AdamWin.ini` terug (het staat niet in
 `BackupUserData`); dat is goed zo.
 
+### Tabblad Testing (gedaan)
+
+In de launcher (`src/RedCatLauncher`, Engelstalig zoals de andere tabbladen), met controller te bedienen zoals de rest:
+
+| Regel | Wat |
+|---|---|
+| Start level | Off of 1 t/m 5. Play doet dan hetzelfde als `--start-level`: `StartLevel.Prepare` en `RcHcGame.dat -game`, zonder menu (dus ook zonder de controller-als-muis). Ook `--spelen` volgt dit. |
+| Log graphics driver, Log loading, Log player position | `DebugDriver`, `DebugLoading`, `DebugPlayerPosition` in `AdamWin.ini [Debug]`. Zodra er een aan staat, gaan de logs ook aan (`TestOptions.Effective`); de regel Debug logs onder Advanced toont dan "On (Testing tab)". |
+| Clean up logs | `DebugLogs.Clean`, met het aantal verwijderde bestanden in de statusregel |
+| Open log folder | De spelmap in de bestandsbeheerder: `explorer.exe` op Windows; onder Proton/Wine `winebrowser` met een `file://`-adres, dat het aan `xdg-open` geeft (Linux-bestandsbeheerder); native op Linux `xdg-open` |
+
+Bewaard in `RedCatLauncher.ini [Testen]` (zie "Waar de launcher zijn keuze bewaart"). Bij Play zet `TestOptions.Apply`
+alleen de schakelaars uit `TestOptions.DebugKeys`: `1` als ze aan staan, anders de waarde uit de basis; wat er anders
+in `AdamWin.ini` staat (ook andere `[Debug]`-sleutels), blijft staan. Dat is herhaalbaar vanaf elke vorige stand
+(`TestOptionsTests`, `BasisTests.Apply_WithTestOptions_FromAnyPrevious_EqualsFreshInstall`). Een nieuwe schakelaar
+(uit stap 8) komt in `TestOptions.DebugKeys` en in `DebugSwitches` van `MainWindow` (label en uitleg).
+
 ## Herhaalbaar toepassen en terugdraaien
 
 Twee manieren:
@@ -226,8 +243,9 @@ BasisSha256=...  ; ter controle van RedCatPatcher\basis
 - **In de spelmap, niet in `%APPDATA%`**: de map is draagbaar (USB-stick, andere pc), Proton en Windows zien hetzelfde
   bestand, en er is één installatie per map. Een tweede installatie heeft zijn eigen keuze.
 - **`BackupUserData`** neemt het bestand mee bij opnieuw patchen, net als `menu.ini`: dezelfde keuze komt terug.
-- Testinstellingen (`[Debug]`-sleutels, startlevel) staan niet in `[Keuze]`; die staan in `AdamWin.ini` en `Game.ini`
-  zelf. Alleen het laatst gekozen level kan de launcher onthouden voor het gemak.
+- Testinstellingen (`[Debug]`-schakelaars, startlevel) staan niet in `[Keuze]` maar in een eigen sectie `[Testen]`
+  (`StartLevel=0..5`, `DebugDriver=0/1`, ...), die alleen de launcher schrijft en alleen als er iets aan staat. De
+  patcher schrijft het bestand zonder `[Testen]`, dus opnieuw patchen zet de testhulp terug, net als `AdamWin.ini`.
 
 ## Proton en Steam
 
@@ -346,8 +364,8 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
    een Steam-regel aan appid, exe of `RedCat.exe` in dezelfde map (appid, speeltijd, startopties en Proton-keuze
    blijven; `--proton` alleen nog als je hem opgeeft), op Windows ook bestaande `.lnk`'s naar `RedCat.exe` op het
    bureaublad en in het Startmenu. Steam start het venster, niet `--spelen` (zie "Keuze: wat Steam start").
-7. **Tabblad Testen**: startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch aan), logs opruimen, logmap
-   openen.
+7. ~~**Tabblad Testen**~~ (gedaan, tabblad Testing): startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch
+   aan), logs opruimen, logmap openen. Zie "Tabblad Testing" onder groep 3.
 8. **Onderzoek** naar `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole` in de disassembly; wat bruikbaar is,
    komt als schakelaar op de Testen-tab.
 9. Pas daarna, en alleen met een tweede reden, een besluit over native code in het spel.
