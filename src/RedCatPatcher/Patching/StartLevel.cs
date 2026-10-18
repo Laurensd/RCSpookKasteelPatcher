@@ -46,8 +46,11 @@ public static class StartLevel
         IniFile.Set(game, "Run", "Replay", "0");
     }
 
-    /// <summary>Start het spel; alleen op Windows (onder Linux start je het zelf via Proton/Wine).</summary>
-    public static void Launch(string gameDir) =>
+    /// <summary>
+    /// Start het spel; alleen op Windows (onder Linux start je het zelf via Proton/Wine; de launcher draait daar zelf
+    /// onder Proton en kan het wel).
+    /// </summary>
+    public static Process? Launch(string gameDir) =>
         Process.Start(new ProcessStartInfo(Path.Combine(gameDir, "RcHcGame.dat"), "-game")
         {
             WorkingDirectory = gameDir,

@@ -71,7 +71,7 @@ public sealed class BasisTests : IDisposable
 
     private static readonly Dictionary<string, string> BasisInis = new()
     {
-        ["AdamWin.ini"] = "[Camera-LevelCamera]\r\nFieldOfView=1.360000\r\n[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n[Debug]\r\nDebugDriver=0\r\n",
+        ["AdamWin.ini"] = "[Camera-LevelCamera]\r\nFieldOfView=1.360000\r\n[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n[Debug]\r\nDebugDriver=0\r\nDebugLoading=0\r\nDebugPlayerPosition=0\r\n",
         [Path.Combine("settings", "static.ini")] = "[DEFAULTSETTINGS]\r\nLeft=37\r\nRight=39\r\nUp=38\r\nDown=40\r\nExtra1=17\r\n",
         [Path.Combine("settings", "PlayerDef.ini")] =
             "[KeyBinds]\r\nFire=Control\r\nMoveForward=Up\r\nMoveBack=Down\r\nTurnLeft=Left\r\nTurnRight=Right\r\n" +
@@ -157,6 +157,50 @@ public sealed class BasisTests : IDisposable
             Apply(game, choices[i], version);   // nog een keer: verandert niets
             Assert.Equal(fresh[i], Snapshot(game));
         }
+    }
+
+    /// <summary>
+    /// Zoals de launcher bij Play: de keuze met de logs aan voor een [Debug]-schakelaar, dan de schakelaars zelf. Ook met
+    /// het tabblad Testing geeft elke overgang hetzelfde als een verse installatie.
+    /// </summary>
+    [Fact]
+    public void Apply_WithTestOptions_FromAnyPrevious_EqualsFreshInstall()
+    {
+        var version = GameVersion.V100;
+        var on = new TestOptions { StartLevel = 4 }.WithDebug("DebugDriver", true).WithDebug("DebugPlayerPosition", true);
+        var steps = new (Choice Choice, TestOptions Testing)[]
+        {
+            (new Choice(), new TestOptions()),
+            (new Choice(), on),
+            (new Choice { Widescreen = Widescreen.Wide16x9, DebugLogs = true }, on),
+            (new Choice { Widescreen = Widescreen.Wide16x9, DebugLogs = true }, new TestOptions().WithDebug("DebugLoading", true)),
+            (new Choice { Wasd = true }, new TestOptions { StartLevel = 1 }),
+        };
+        void Play(string dir, Choice choice, TestOptions testing)
+        {
+            Apply(dir, testing.Effective(choice), version);
+            testing.Apply(dir);
+        }
+        var fresh = steps.Select((s, i) =>
+        {
+            var dir = MakeGame(version, $"fresh{i}");
+            Play(dir, s.Choice, s.Testing);
+            return Snapshot(dir);
+        }).ToList();
+
+        var game = MakeGame(version);
+        foreach (var i in new[] { 0, 1, 2, 3, 4, 3, 2, 1, 0, 4, 1, 3, 0 })
+        {
+            Play(game, steps[i].Choice, steps[i].Testing);
+            Play(game, steps[i].Choice, steps[i].Testing);
+            Assert.Equal(fresh[i], Snapshot(game));
+        }
+
+        // Een schakelaar aan geeft dezelfde binaire bestanden als logs aan zonder schakelaar; alleen AdamWin.ini verschilt.
+        var logs = MakeGame(version, "logs");
+        Apply(logs, new Choice { DebugLogs = true }, version);
+        Assert.All(Basis.BinaryFiles, f => Assert.Equal(Snapshot(logs)[f], fresh[1][f]));
+        Assert.Contains("DebugDriver=1\r\nDebugLoading=0\r\nDebugPlayerPosition=1\r\n", System.Text.Encoding.Latin1.GetString(fresh[1]["AdamWin.ini"]));
     }
 
     [Fact]
