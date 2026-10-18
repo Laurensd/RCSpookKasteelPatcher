@@ -115,6 +115,39 @@ public static class ShellLink
         w.Write(suffixUnicode);
     }
 
+    /// <summary>
+    /// Het doel van een bestaande .lnk uit het LinkInfo-blok (lokaal pad plus achtervoegsel, Unicode als dat er is),
+    /// of null als de snelkoppeling geen lokaal pad heeft of geen geldige .lnk is.
+    /// </summary>
+    public static string? ReadTarget(byte[] lnk)
+    {
+        try
+        {
+            if (lnk.Length < 0x4C || BitConverter.ToInt32(lnk, 0) != 0x4C || new Guid(lnk.AsSpan(4, 16)) != LinkClsid) return null;
+            var flags = (LinkFlags)BitConverter.ToUInt32(lnk, 0x14);
+            int pos = 0x4C;
+            if (flags.HasFlag(LinkFlags.HasLinkTargetIdList)) pos += 2 + BitConverter.ToUInt16(lnk, pos);
+            if (!flags.HasFlag(LinkFlags.HasLinkInfo)) return null;
+
+            int headerSize = BitConverter.ToInt32(lnk, pos + 4);
+            if ((BitConverter.ToInt32(lnk, pos + 8) & 1) == 0) return null; // geen VolumeIDAndLocalBasePath
+            if (headerSize >= 0x24 && BitConverter.ToInt32(lnk, pos + 0x1C) is > 0 and var basePathUnicode)
+                return UnicodeAt(lnk, pos + basePathUnicode) + UnicodeAt(lnk, pos + BitConverter.ToInt32(lnk, pos + 0x20));
+            return AnsiAt(lnk, pos + BitConverter.ToInt32(lnk, pos + 0x10)) + AnsiAt(lnk, pos + BitConverter.ToInt32(lnk, pos + 0x18));
+        }
+        catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { return null; }
+    }
+
+    private static string UnicodeAt(byte[] data, int offset)
+    {
+        int end = offset;
+        while (data[end] != 0 || data[end + 1] != 0) end += 2;
+        return Encoding.Unicode.GetString(data, offset, end - offset);
+    }
+
+    private static string AnsiAt(byte[] data, int offset) =>
+        Encoding.Latin1.GetString(data, offset, Array.IndexOf(data, (byte)0, offset) - offset);
+
     private static void WriteCountedString(BinaryWriter w, string value)
     {
         w.Write((ushort)value.Length);

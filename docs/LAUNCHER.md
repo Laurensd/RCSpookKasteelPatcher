@@ -241,9 +241,22 @@ BasisSha256=...  ; ter controle van RedCatPatcher\basis
   "direct spelen"-stand hebben (zonder venster `RedCat.exe` starten met de toegepaste keuze), zodat hij in Game Mode
   niet in de weg zit.
 - Steam-snelkoppeling: `SteamShortcuts` herkent een bestaande regel aan de appid of aan de exe. Wijst de snelkoppeling
-  voortaan naar de launcher, dan klopt geen van beide meer en ontstaat er een tweede RedCat in Steam. De patcher moet
-  daarom ook een regel met `Exe` = `RedCat.exe` in dezelfde map herkennen en die bijwerken (appid, Proton-keuze en
-  speeltijd houden).
+  voortaan naar de launcher, dan klopt geen van beide meer en ontstaat er een tweede RedCat in Steam. De patcher
+  herkent daarom ook een regel met `Exe` = `RedCat.exe` in dezelfde map en werkt die bij (appid, Proton-keuze en
+  speeltijd blijven). Gedaan in stap 6, zie hieronder.
+
+### Keuze: wat Steam start (stap 6)
+
+De Steam-regel start **het launchervenster**, zonder startopties. Afwegingen:
+
+- Het venster is in Game Mode te bedienen met de controller (stap 5): d-pad/stick, A, LB/RB, Start speelt. Een speler
+  die op de Deck iets wil wisselen (16:10, controller-indeling), kan dat dan zonder de bureaubladmodus.
+- Na Play verbergt de launcher zich en blijft hij draaien tot `RedCat.exe` stopt (voor de controller in de menu's).
+  Steam ziet de game dus de hele tijd als "bezig", ook met `--spelen`; daarin verschillen de twee niet.
+- `--spelen` als vaste startoptie zou het venster in Game Mode onbereikbaar maken; wie direct wil spelen, zet het zelf
+  bij Eigenschappen → Startopties. De patcher laat de startopties van een bestaande regel staan (ook bij het omzetten
+  van een oude `RedCat.exe`-regel), dus die keuze, en bijv. `PROTON_LOG=1 %command%`, blijft bij opnieuw patchen.
+- Pictogram (Windows): blijft `RedCat.exe`, het spelpictogram, voor de snelkoppelingen en Steam.
 
 ## Proef GUI-framework (stap 4)
 
@@ -329,7 +342,10 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
    start zonder venster; `--software` tekent zonder GPU. De patcher kopieert `RedCatLauncher.exe` naast zich mee naar
    de spelmap. Nog met de hand te testen onder Proton en op de Deck (teststappen in de PR). Daarna Engelstalig gemaakt
    met een tabbalk: Display, Graphics, Controls en Advanced (LB/RB of PgUp/PgDn wisselt); Testen kan daar later bij.
-6. **Snelkoppelingen en Steam naar de launcher**, met herkenning van de oude regel naar `RedCat.exe`.
+6. ~~**Snelkoppelingen en Steam naar de launcher**~~ (gedaan), met herkenning van de oude regel naar `RedCat.exe`:
+   een Steam-regel aan appid, exe of `RedCat.exe` in dezelfde map (appid, speeltijd, startopties en Proton-keuze
+   blijven; `--proton` alleen nog als je hem opgeeft), op Windows ook bestaande `.lnk`'s naar `RedCat.exe` op het
+   bureaublad en in het Startmenu. Steam start het venster, niet `--spelen` (zie "Keuze: wat Steam start").
 7. **Tabblad Testen**: startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch aan), logs opruimen, logmap
    openen.
 8. **Onderzoek** naar `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole` in de disassembly; wat bruikbaar is,

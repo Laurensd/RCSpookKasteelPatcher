@@ -5,7 +5,7 @@ using RedCatPatcher.Patching;
 using RedCatPatcher.Updates;
 
 const string GameFolderName = "RedCat Spookkasteel";
-const string LauncherExe = "RedCatLauncher.exe";
+const string LauncherExe = Shortcuts.LauncherExe;
 
 Options options;
 try { options = Options.Parse(args); }
@@ -35,10 +35,13 @@ if (options.ShowHelp)
           --no-vsync                 Verticale synchronisatie uit (kan beeldscheuren geven)
           --msaa <off|2x|4x|8x|16x>  Anti-aliasing van randen (standaard 4x)
           --crt                      CRT-effect: scanlines en een licht gebold beeld, zoals een oude monitor
-          --shortcut / --no-shortcut Snelkoppeling op het bureaublad en in het Startmenu (Linux: programmamenu)
-          --steam / --no-steam       RedCat toevoegen aan Steam als niet-Steam-game (Linux: met Proton)
+          --shortcut / --no-shortcut Snelkoppeling naar de launcher op het bureaublad en in het Startmenu (Linux:
+                                     programmamenu); oude snelkoppelingen naar RedCat.exe worden omgezet
+          --steam / --no-steam       De launcher toevoegen aan Steam als niet-Steam-game (Linux: met Proton); een
+                                     bestaande RedCat-regel wordt bijgewerkt
           --steam-dir <map>          Steam-map, als de patcher die niet zelf vindt
-          --proton <naam>            Compatibiliteitstool voor Steam op Linux (standaard proton_experimental)
+          --proton <naam>            Compatibiliteitstool voor Steam op Linux (standaard proton_experimental; zonder
+                                     deze optie blijft een al gekozen tool staan)
           --debug-logs               Logbestanden van spel en menu aan laten (AdamDebug*.log e.d.), voor het
                                      zoeken naar problemen
           --yes                      Niets vragen; bestaande installatiemap overschrijven
@@ -197,7 +200,7 @@ try
     Console.WriteLine($"  {Path.Combine(outDir, "RedCat.exe")}");
     if (hasLauncher) Console.WriteLine($"  of, om eerst instellingen te kiezen: {Path.Combine(outDir, LauncherExe)}");
     if (!OperatingSystem.IsWindows() && options.Shortcuts.Steam != true)
-        Console.WriteLine("  (Linux/Steam Deck: voeg RedCat.exe toe aan Steam met --steam, of zelf als niet-Steam-game met Proton.)");
+        Console.WriteLine("  (Linux/Steam Deck: voeg RedCat toe aan Steam met --steam, of zelf als niet-Steam-game met Proton.)");
     Pause(interactive);
     return 0;
 }

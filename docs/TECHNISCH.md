@@ -546,6 +546,10 @@ hebben.
 
 Code in `Install/` en `Steam/`; los herbruikbaar (bijvoorbeeld voor een Steam Input-lay-out per game).
 
+Alles wijst naar `RedCatLauncher.exe` als die in de spelmap staat (de patcher zet hem daar), anders naar `RedCat.exe`.
+Het pictogram blijft `RedCat.exe`. Een installatie van v0.1.0/v0.2.0 heeft snelkoppelingen naar `RedCat.exe`; die
+worden bij opnieuw patchen met `--shortcut`/`--steam` omgezet in plaats van dat er een tweede bij komt.
+
 ### Windows-snelkoppeling (`Install/ShellLink.cs`)
 
 De patcher schrijft het `.lnk`-bestand zelf (MS-SHLLINK), want `IShellLink` via COM werkt niet in een getrimde
@@ -553,6 +557,12 @@ single-file build. Het bestand bestaat uit de header, de IDList van `RedCat.exe`
 Unicode) en de strings voor omschrijving, werkmap en pictogram (`RedCat.exe,0`). De IDList is nodig: zonder IDList
 negeert Verkenner het doel, ook als LinkInfo klopt. Die IDList komt van `SHParseDisplayName` (gewone P/Invoke naar
 `shell32`), dus precies wat de shell zelf zou opslaan.
+
+Omzetten: `ShellLink.ReadTarget` leest het doel uit het LinkInfo-blok van een bestaande `.lnk` (`LocalBasePathUnicode`
+als die er is, anders het ANSI-pad, plus het achtervoegsel). De patcher schrijft `RedCat Spookkasteel.lnk` op het
+bureaublad en in `Programs` opnieuw en zoekt daar (met submappen) naar andere `.lnk`'s met als doel `RedCat.exe` in
+dezelfde spelmap, bijvoorbeeld een hernoemde kopie. Die krijgen dezelfde bestandsnaam met de launcher als doel.
+Snelkoppelingen zonder LinkInfo (alleen een IDList) en naar een andere map blijven ongemoeid.
 
 ### Steam: `shortcuts.vdf`
 
@@ -570,8 +580,16 @@ gameid = (appid << 32) | 0x02000000      (voor steam://rungameid/)
 ```
 
 Dezelfde appid gebruikt Steam voor de Proton-keuze, plaatjes (`config/grid/<appid>p.png`) en controllerconfiguraties.
-Staat RedCat al in de lijst (zelfde exe of zelfde appid), dan werkt de patcher die regel bij en houdt hij de bestaande appid,
-speeltijd en tags. Accounts komen uit de mappen in `userdata` (behalve `0`); de namen uit `config/loginusers.vdf`
+Staat RedCat al in de lijst, dan werkt de patcher die regel bij (`SteamShortcuts.AddOrUpdate`). Herkenning, in deze volgorde:
+
+1. zelfde appid of zelfde `Exe` (`RedCatLauncher.exe` in deze map);
+2. anders een regel met `Exe` = `RedCat.exe` in dezelfde map: de regel van v0.1.0/v0.2.0.
+
+Paden worden vergeleken zonder aanhalingstekens, hoofdletterongevoelig en met `/` gelijk aan `\`. Een regel naar
+`RedCat.exe` in een andere map is een andere installatie en blijft staan. De bijgewerkte regel houdt zijn **appid**,
+ook al hoort die bij de oude exe: Proton-keuze, plaatjes, controllerlay-out en speeltijd hangen eraan, en Steam leest
+de appid uit het bestand in plaats van hem opnieuw te berekenen. Ook `LastPlayTime`, `tags`, `IsHidden` en
+`LaunchOptions` blijven; alleen `AppName`, `Exe`, `StartDir` en `icon` worden gezet. Accounts komen uit de mappen in `userdata` (behalve `0`); de namen uit `config/loginusers.vdf`
 (SteamID64 = account-id + 76561197960265728).
 
 ### Steam: Proton (`config/config.vdf`)
@@ -582,6 +600,9 @@ Op Linux zet de patcher de compatibiliteitstool in de tekst-VDF `config/config.v
 "InstallConfigStore" { "Software" { "Valve" { "Steam" { "CompatToolMapping" {
     "<appid>" { "name" "proton_experimental"  "config" ""  "priority" "250" } } } } } }
 ```
+
+Staat er voor de appid al een tool (zelf gekozen in Steam, of eerder door de patcher), dan blijft die staan, tenzij
+`--proton` is opgegeven.
 
 `Steam/TextVdf.cs` bewaart strings ruw (met escapes), zodat de rest van het bestand ongewijzigd terugkomt. Steam leest beide
 bestanden bij het opstarten en schrijft `config.vdf` terug bij het afsluiten; daarom moet Steam dicht zijn. Steam wordt
