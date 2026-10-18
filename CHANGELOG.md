@@ -17,6 +17,7 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 - `--proton` overschrijft een in Steam gekozen Proton-versie alleen nog als je de optie opgeeft.
 
 ### Opgelost
+- Testspeler 10 kon bij een directe start (`--start-level` of Start level op het tabblad Testing) vanaf Het Kasteel niet schieten: schieten is een vaardigheid die je in de levels verdient, en een verse speler heeft er geen. De testspeler krijgt nu de vaardigheden die Snelspel bij die Griezelplek geeft (De Grotten: schieten, power shot en superjump). Gewone spelers blijven ongemoeid.
 - Menu's met de controller: de launcher laat de linkerstick de muis bewegen in de menu's, A klikt, B is Esc en Start is Enter (uit te zetten onder Controls). Het menu zelf leest geen controller.
 - Controller werkt niet als Windows hem een ander joystick-ID dan 0 of 1 geeft (bijv. naast virtuele gamepads van Steam of Oculus): het spel zoekt nu alle 16 ID's af. Bestaande installaties krijgen de fix bij de volgende Play in de launcher.
 - Spel, het zwarte achtergrondvenster van `RedCat.exe` en de launcher hebben het RedCat-icoon in de taakbalk in plaats van een leeg standaardicoon.

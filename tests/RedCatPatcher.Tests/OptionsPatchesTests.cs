@@ -212,18 +212,26 @@ public class OptionsPatchesTests
 
             Assert.Equal("[Run]\r\nPlayerNumber=10\r\nStartLevelNumber=1\r\nStartSubLevelNumber=4\r\nStartSubSubLevelNumber=1\r\nReplay=0\r\nIsLowEndPC=0\r\n",
                 File.ReadAllText(Path.Combine(settings, "Game.ini")));
-            Assert.Equal("[Player]\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
+            // Zonder [sublevel1_4] in Game.ini: StandardSkill uit de tabel (7 = schieten, power shot, superjump)
+            Assert.Equal("[Player]\r\nSkill=7\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
             Assert.Throws<PatchException>(() => StartLevel.Prepare(dir, 6));
 
             // Met de console: Console=1 in [General] van de verse kopie (PlayerDef.ini zelf blijft zoals hij is)
             File.WriteAllText(Path.Combine(settings, "PlayerDef.ini"), "[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n");
             StartLevel.Prepare(dir, 1, console: true);
-            Assert.Equal("[General]\nConsole=1\nDifficultyLevel=1\n\n[Player]\nLife=3\n",
+            Assert.Equal("[General]\nConsole=1\nDifficultyLevel=1\n\n[Player]\nSkill=0\nLife=3\n",
                 File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
             Assert.Equal("[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n", File.ReadAllText(Path.Combine(settings, "PlayerDef.ini")));
             StartLevel.Prepare(dir, 1);
-            Assert.Equal("[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n",
+            Assert.Equal("[General]\nDifficultyLevel=1\n\n[Player]\nSkill=0\nLife=3\n",
                 File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
+
+            // StandardSkill uit Game.ini gaat voor de tabel; een bestaande Skill wordt overschreven
+            File.AppendAllText(Path.Combine(settings, "Game.ini"), "\r\n[sublevel1_3]\r\nNrPotions=40\r\nStandardSkill=11\r\n");
+            File.WriteAllText(Path.Combine(settings, "PlayerDef.ini"), "[Player]\r\nSkill=0\r\nLife=3\r\n");
+            StartLevel.Prepare(dir, 3);
+            Assert.Equal("[Player]\r\nSkill=11\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
+            Assert.Equal("[Player]\r\nSkill=0\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, "PlayerDef.ini")));
         }
         finally { Directory.Delete(dir, true); }
     }
