@@ -15,7 +15,7 @@ public static class Basis
     public static readonly string DirName = Path.Combine("RedCatPatcher", "basis");
 
     /// <summary>De binaire bestanden die opnieuw opgebouwd worden.</summary>
-    public static readonly string[] BinaryFiles = ["RcHcGame.dat", "RcHcMenu.dat", "GlideDrv.dll"];
+    public static readonly string[] BinaryFiles = ["RcHcGame.dat", "RcHcMenu.dat", "GlideDrv.dll", "RedCat.exe"];
 
     /// <summary>INI's waarvan de launcher de originele waarden nodig heeft (FOV, toetsen, iconposities).</summary>
     public static readonly string[] IniFiles =
@@ -56,7 +56,7 @@ public static class Basis
     }
 
     /// <summary>
-    /// Bouwt de drie binaire bestanden in het geheugen op uit de basis (bestandsnaam → inhoud). De basis zelf blijft
+    /// Bouwt de binaire bestanden in het geheugen op uit de basis (bestandsnaam → inhoud). De basis zelf blijft
     /// ongewijzigd.
     /// </summary>
     public static Dictionary<string, byte[]> Build(IReadOnlyDictionary<string, byte[]> basis, GameVersion version, Choice choice)
