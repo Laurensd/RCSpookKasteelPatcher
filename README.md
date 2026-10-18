@@ -135,15 +135,17 @@ Na het patchen vraagt de patcher (j/N) of hij snelkoppelingen maakt; met `--yes`
 
 | Vlag | Wat het doet |
 |---|---|
-| `--shortcut` | Windows: snelkoppeling op het bureaublad en in het Startmenu. Linux: `redcat-spookkasteel.desktop` in het programmamenu (start via Steam, of via Wine als RedCat niet in Steam staat) |
-| `--steam` | RedCat toevoegen aan Steam als niet-Steam-game, voor elke Steam-gebruiker op de computer. Op Linux zet de patcher er ook Proton bij als compatibiliteitstool |
-| `--proton <naam>` | Welke Proton (standaard `proton_experimental`), bijv. `proton_9` of `GE-Proton9-20` |
+| `--shortcut` | Windows: snelkoppeling naar de launcher op het bureaublad en in het Startmenu. Linux: `redcat-spookkasteel.desktop` in het programmamenu (start via Steam, of via Wine als RedCat niet in Steam staat) |
+| `--steam` | De launcher toevoegen aan Steam als niet-Steam-game, voor elke Steam-gebruiker op de computer. Op Linux zet de patcher er ook Proton bij als compatibiliteitstool |
+| `--proton <naam>` | Welke Proton (standaard `proton_experimental`), bijv. `proton_9` of `GE-Proton9-20`. Zonder deze optie blijft een al gekozen Proton staan |
 | `--steam-dir <map>` | Steam-map, als de patcher Steam niet zelf vindt |
 | `--no-shortcut`, `--no-steam` | Niet vragen, overslaan |
 
 **Sluit Steam af voordat je `--steam` gebruikt**: Steam leest zijn lijst met games alleen bij het opstarten en schrijft zijn
 instellingen terug bij het afsluiten. De patcher vraagt erom als Steam nog draait. Van `shortcuts.vdf` en `config.vdf` maakt
-hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game in Steam bij in plaats van een tweede toe te voegen.
+hij eerst een backup (`*.bak` ernaast). Opnieuw patchen werkt de bestaande game in Steam bij in plaats van een tweede toe te voegen,
+ook als die van een eerdere versie naar `RedCat.exe` wees; speeltijd en startopties blijven. Steam opent de launcher (met de
+controller te bedienen); wil je direct spelen, zet dan `--spelen` bij Eigenschappen → Startopties.
 
 ### Direct naar een level (testen)
 
@@ -160,7 +162,7 @@ de patcher het level klaar en start je `RcHcGame.dat -game` zelf via Proton/Wine
   ```
   ./RedCatPatcher --widescreen 16:10 --steam
   ```
-- Liever zelf? Voeg `RedCat Spookkasteel/RedCat.exe` in Steam toe als niet-Steam-game en kies bij Compatibiliteit een Proton-versie.
+- Liever zelf? Voeg `RedCat Spookkasteel/RedCatLauncher.exe` in Steam toe als niet-Steam-game en kies bij Compatibiliteit een Proton-versie.
 
 ## Wat er wordt opgelost
 

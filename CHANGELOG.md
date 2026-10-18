@@ -10,6 +10,10 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 - De patcher bewaart een kopie van de spelbestanden vóór de fixes (`RedCatPatcher\basis` in de spelmap) en schrijft de gekozen opties naar `RedCatLauncher.ini`. Daarmee kan de launcher later een andere keuze toepassen en terugdraaien zonder de disc.
 - Opnieuw patchen zonder opties voor breedbeeld, besturing, beeld of logs gebruikt de keuze uit `RedCatLauncher.ini`.
 
+### Gewijzigd
+- Snelkoppelingen (`--shortcut`) en de game in Steam (`--steam`) starten nu `RedCatLauncher.exe` in plaats van `RedCat.exe`. Bestaande snelkoppelingen en de Steam-regel van een eerdere versie worden omgezet bij opnieuw patchen met die optie, zonder tweede RedCat in Steam: speeltijd, startopties, plaatjes en de gekozen Proton-versie blijven. In Steam (ook op de Steam Deck in de gamemodus) opent de launcher met zijn venster; zet `--spelen` bij de startopties om direct te spelen.
+- `--proton` overschrijft een in Steam gekozen Proton-versie alleen nog als je de optie opgeeft.
+
 ### Opgelost
 - Menu's met de controller: de launcher laat de linkerstick de muis bewegen in de menu's, A klikt, B is Esc en Start is Enter (uit te zetten onder Controls). Het menu zelf leest geen controller.
 - Controller werkt niet als Windows hem een ander joystick-ID dan 0 of 1 geeft (bijv. naast virtuele gamepads van Steam of Oculus): het spel zoekt nu alle 16 ID's af. Bestaande installaties krijgen de fix bij de volgende Play in de launcher.

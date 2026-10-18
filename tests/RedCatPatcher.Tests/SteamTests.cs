@@ -96,8 +96,9 @@ public sealed class SteamTests
         var root = BinaryVdf.Read(SampleShortcutsVdf());
         var shortcut = new SteamShortcut("RedCat Spookkasteel", @"D:\RedCat Spookkasteel\RedCat.exe", @"D:\RedCat Spookkasteel");
 
-        uint appId = SteamShortcuts.AddOrUpdate(root, shortcut);
+        var (appId, found) = SteamShortcuts.AddOrUpdate(root, shortcut);
         Assert.Equal(shortcut.AppId, appId);
+        Assert.Equal(SteamShortcuts.Found.New, found);
 
         var list = root.Map("shortcuts")!;
         Assert.Equal(2, list.Count);
@@ -121,13 +122,103 @@ public sealed class SteamTests
         root.Map("shortcuts")!.Map("0")!["LastPlayTime"] = 12345;
 
         // Andere naam, zelfde exe: dezelfde game, appid blijft gelijk (anders kwijt: Proton-keuze, plaatjes, speeltijd).
-        uint appId = SteamShortcuts.AddOrUpdate(root, shortcut with { AppName = "RedCat" });
+        var (appId, found) = SteamShortcuts.AddOrUpdate(root, shortcut with { AppName = "RedCat" });
+        Assert.Equal(SteamShortcuts.Found.Same, found);
 
         var list = root.Map("shortcuts")!;
         Assert.Single(list);
         Assert.Equal(shortcut.AppId, appId);
         Assert.Equal("RedCat", list.Map("0")!.String("AppName"));
         Assert.Equal(12345, list.Map("0")!["LastPlayTime"]);
+    }
+
+    private static readonly SteamShortcut Launcher =
+        new("RedCat Spookkasteel", "/games/RedCat/RedCatLauncher.exe", "/games/RedCat");
+
+    /// <summary>shortcuts.vdf met RedCat zoals v0.2.0 hem toevoegde (naar RedCat.exe), met speeltijd en startopties.</summary>
+    private static VdfMap OldRedCatEntry(string dir, out uint oldAppId)
+    {
+        var root = BinaryVdf.Read(SampleShortcutsVdf());
+        var old = new SteamShortcut("RedCat Spookkasteel", dir + "/RedCat.exe", dir);
+        (oldAppId, _) = SteamShortcuts.AddOrUpdate(root, old);
+        var entry = root.Map("shortcuts")!.Map("1")!;
+        entry["LastPlayTime"] = 1760000000;
+        entry["LaunchOptions"] = "PROTON_LOG=1 %command%";
+        return root;
+    }
+
+    [Fact]
+    public void AddOrUpdate_RecognisesOldEntryByFormerExe()
+    {
+        var root = OldRedCatEntry("/games/RedCat", out uint oldAppId);
+
+        var (appId, found) = SteamShortcuts.AddOrUpdate(root, Launcher, "/games/RedCat/RedCat.exe");
+
+        Assert.Equal(SteamShortcuts.Found.FormerExe, found);
+        Assert.Equal(oldAppId, appId);               // Proton-keuze, plaatjes en speeltijd hangen aan de appid
+        Assert.NotEqual(Launcher.AppId, appId);
+        var list = root.Map("shortcuts")!;
+        Assert.Equal(2, list.Count);
+        var redcat = list.Map("1")!;
+        Assert.Equal("\"/games/RedCat/RedCatLauncher.exe\"", redcat.String("Exe"));
+        Assert.Equal(1760000000, redcat["LastPlayTime"]);
+        Assert.Equal("PROTON_LOG=1 %command%", redcat.String("LaunchOptions"));
+        Assert.Equal("Mijn spel", list.Map("0")!.String("AppName"));
+
+        // Nog een keer: nu herkend aan de appid, nog steeds één regel.
+        Assert.Equal((oldAppId, SteamShortcuts.Found.Same), SteamShortcuts.AddOrUpdate(root, Launcher, "/games/RedCat/RedCat.exe"));
+        Assert.Equal(2, list.Count);
+    }
+
+    [Fact]
+    public void AddOrUpdate_FormerExeMatchesWindowsPathsLikeSteam()
+    {
+        var root = SteamShortcuts.Empty();
+        root.Map("shortcuts")!.Add("0", new VdfMap { { "appid", 1234 }, { "AppName", "RedCat" }, { "Exe", "\"D:/Spellen/REDCAT/redcat.exe\"" } });
+
+        var launcher = new SteamShortcut("RedCat Spookkasteel", @"D:\Spellen\RedCat\RedCatLauncher.exe", @"D:\Spellen\RedCat");
+        Assert.Equal((1234u, SteamShortcuts.Found.FormerExe), SteamShortcuts.AddOrUpdate(root, launcher, @"D:\Spellen\RedCat\RedCat.exe"));
+        Assert.Single(root.Map("shortcuts")!);
+    }
+
+    [Fact]
+    public void AddOrUpdate_RecognisesEntryByAppId()
+    {
+        // Zelfde appid, maar een exe die er niet op lijkt (bijv. door Steam of een ander programma herschreven).
+        var root = SteamShortcuts.Empty();
+        root.Map("shortcuts")!.Add("0", new VdfMap { { "appid", (int)Launcher.AppId }, { "Exe", "\"/elders/iets.exe\"" }, { "LastPlayTime", 5 } });
+
+        Assert.Equal((Launcher.AppId, SteamShortcuts.Found.Same), SteamShortcuts.AddOrUpdate(root, Launcher, "/games/RedCat/RedCat.exe"));
+        var entry = Assert.Single(root.Map("shortcuts")!).Value as VdfMap;
+        Assert.Equal("\"/games/RedCat/RedCatLauncher.exe\"", entry!.String("Exe"));
+        Assert.Equal(5, entry["LastPlayTime"]);
+    }
+
+    [Fact]
+    public void AddOrUpdate_NoEntryAddsLauncher()
+    {
+        var root = BinaryVdf.Read(SampleShortcutsVdf());
+        var (appId, found) = SteamShortcuts.AddOrUpdate(root, Launcher with { LaunchOptions = "--spelen" }, "/games/RedCat/RedCat.exe");
+
+        Assert.Equal((Launcher.AppId, SteamShortcuts.Found.New), (appId, found));
+        var entry = root.Map("shortcuts")!.Map("1")!;
+        Assert.Equal("\"/games/RedCat/RedCatLauncher.exe\"", entry.String("Exe"));
+        Assert.Equal("--spelen", entry.String("LaunchOptions"));
+    }
+
+    [Fact]
+    public void AddOrUpdate_LeavesEntryForOtherFolderAlone()
+    {
+        var root = OldRedCatEntry("/games/RedCat-tweede", out uint otherAppId);
+
+        var (appId, found) = SteamShortcuts.AddOrUpdate(root, Launcher, "/games/RedCat/RedCat.exe");
+
+        Assert.Equal(SteamShortcuts.Found.New, found);
+        Assert.NotEqual(otherAppId, appId);
+        var list = root.Map("shortcuts")!;
+        Assert.Equal(3, list.Count);
+        Assert.Equal("\"/games/RedCat-tweede/RedCat.exe\"", list.Map("1")!.String("Exe"));
+        Assert.Equal("\"/games/RedCat/RedCatLauncher.exe\"", list.Map("2")!.String("Exe"));
     }
 
     private const string SampleConfigVdf = """
@@ -187,6 +278,19 @@ public sealed class SteamTests
     }
 
     [Fact]
+    public void SetCompatTool_KeepsExistingChoiceUnlessAsked()
+    {
+        var root = TextVdf.Parse(SampleConfigVdf);
+        Assert.Equal("proton_9", SteamShortcuts.SetCompatTool(root, 0, "proton_experimental", keepExisting: true));
+        Assert.Equal("proton_experimental", SteamShortcuts.SetCompatTool(root, 7, "proton_experimental", keepExisting: true));
+        Assert.Equal("proton_8", SteamShortcuts.SetCompatTool(root, 0, "proton_8"));
+
+        var mapping = root.Map("InstallConfigStore")!.Map("Software")!.Map("Valve")!.Map("Steam")!.Map("CompatToolMapping")!;
+        Assert.Equal("proton_8", mapping.Map("0")!.String("name"));
+        Assert.Equal("proton_experimental", mapping.Map("7")!.String("name"));
+    }
+
+    [Fact]
     public void SetCompatTool_CreatesStructureInEmptyConfig()
     {
         var root = new VdfMap();
@@ -234,6 +338,25 @@ public sealed class SteamTests
         Assert.True(lnk.AsSpan().IndexOf(Encoding.Unicode.GetBytes(@"C:\Games\RedCat Spookkasteel\RedCat.exe")) > 0);
         Assert.Contains(@"C:\Games\RedCat Spookkasteel\RedCat.exe", Encoding.ASCII.GetString(lnk));
         Assert.Equal(0, BitConverter.ToInt32(lnk, lnk.Length - 4));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(new byte[] { 0x14, 0x00, 0x1F, 0x50, 0xE0, 0x4F, 0xD0, 0x20, 0xEA, 0x3A, 0x69, 0x10, 0xA2, 0xD8, 0x08, 0x00, 0x2B, 0x30, 0x30, 0x9D, 0x00, 0x00 })]
+    public void ShellLink_ReadTargetFindsTheTarget(byte[]? idList)
+    {
+        const string target = @"C:\Games\RedCat Spookkasteel – é\RedCat.exe";
+        var lnk = ShellLink.Create(target, @"C:\Games", target, "RedCat", idList);
+        Assert.Equal(target, ShellLink.ReadTarget(lnk));
+    }
+
+    [Fact]
+    public void ShellLink_ReadTargetIgnoresOtherFiles()
+    {
+        Assert.Null(ShellLink.ReadTarget([]));
+        Assert.Null(ShellLink.ReadTarget("geen snelkoppeling"u8.ToArray()));
+        var lnk = ShellLink.Create(@"C:\Games\RedCat.exe", @"C:\Games", @"C:\Games\RedCat.exe", "RedCat");
+        Assert.Null(ShellLink.ReadTarget(lnk[..100]));
     }
 
     [Fact]
