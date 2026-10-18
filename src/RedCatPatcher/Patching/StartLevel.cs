@@ -26,9 +26,11 @@ public static class StartLevel
 
     /// <summary>
     /// Het menu geeft zijn keuze door via Game.ini [Run] en start dan "RcHcGame.dat -game". Dit doet hetzelfde,
-    /// met een verse kopie van PlayerDef.ini (volle gezondheid, 3 levens, standaardtoetsen).
+    /// met een verse kopie van PlayerDef.ini (volle gezondheid, 3 levens, standaardtoetsen). Met <paramref name="console"/>
+    /// krijgt testspeler 10 ook de console (<c>[General] Console=1</c>, zie docs/TECHNISCH.md, "De console"): de
+    /// <c>`</c>-toets opent hem, en <c>cheats on</c> geeft het cheatmenu in het Esc-menu.
     /// </summary>
-    public static void Prepare(string gameDir, int level)
+    public static void Prepare(string gameDir, int level, bool console = false)
     {
         if (level < 1 || level > Levels.Length)
             throw new PatchException($"Kies een level van 1 t/m {Levels.Length}.");
@@ -36,7 +38,9 @@ public static class StartLevel
             throw new PatchException($"Geen gepatcht spel gevonden in '{gameDir}'. Patch eerst, of geef de spelmap op met --out.");
 
         var settings = Path.Combine(gameDir, "settings");
-        File.Copy(Path.Combine(settings, "PlayerDef.ini"), Path.Combine(settings, $"Player{TestPlayer}.ini"), overwrite: true);
+        var player = Path.Combine(settings, $"Player{TestPlayer}.ini");
+        File.Copy(Path.Combine(settings, "PlayerDef.ini"), player, overwrite: true);
+        if (console) IniFile.SetOrAdd(player, "General", "Console", "1");
 
         var game = Path.Combine(settings, "Game.ini");
         IniFile.Set(game, "Run", "PlayerNumber", TestPlayer.ToString());

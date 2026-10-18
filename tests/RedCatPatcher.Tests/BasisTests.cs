@@ -71,7 +71,7 @@ public sealed class BasisTests : IDisposable
 
     private static readonly Dictionary<string, string> BasisInis = new()
     {
-        ["AdamWin.ini"] = "[Camera-LevelCamera]\r\nFieldOfView=1.360000\r\n[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n[Debug]\r\nDebugDriver=0\r\nDebugLoading=0\r\nDebugPlayerPosition=0\r\n",
+        ["AdamWin.ini"] = "[Camera-LevelCamera]\r\nFieldOfView=1.360000\r\n[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n[Debug]\r\nDebugDriver=0\r\nDebugLoading=0\r\nDebugPlayerPosition=0\r\nDebugSecretCommands=0\r\nDebugUseConsole=0\r\n",
         [Path.Combine("settings", "static.ini")] = "[DEFAULTSETTINGS]\r\nLeft=37\r\nRight=39\r\nUp=38\r\nDown=40\r\nExtra1=17\r\n",
         [Path.Combine("settings", "PlayerDef.ini")] =
             "[KeyBinds]\r\nFire=Control\r\nMoveForward=Up\r\nMoveBack=Down\r\nTurnLeft=Left\r\nTurnRight=Right\r\n" +
@@ -175,6 +175,8 @@ public sealed class BasisTests : IDisposable
             (new Choice { Widescreen = Widescreen.Wide16x9, DebugLogs = true }, on),
             (new Choice { Widescreen = Widescreen.Wide16x9, DebugLogs = true }, new TestOptions().WithDebug("DebugLoading", true)),
             (new Choice { Wasd = true }, new TestOptions { StartLevel = 1 }),
+            (new Choice { Wasd = true }, new TestOptions { StartLevel = 2, SecretCommands = true, LoadConsole = true }),
+            (new Choice { Wasd = true }, new TestOptions { SecretCommands = true, LoadConsole = true }),
         };
         void Play(string dir, Choice choice, TestOptions testing)
         {
@@ -189,7 +191,7 @@ public sealed class BasisTests : IDisposable
         }).ToList();
 
         var game = MakeGame(version);
-        foreach (var i in new[] { 0, 1, 2, 3, 4, 3, 2, 1, 0, 4, 1, 3, 0 })
+        foreach (var i in new[] { 0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0, 5, 1, 6, 3, 5, 0 })
         {
             Play(game, steps[i].Choice, steps[i].Testing);
             Play(game, steps[i].Choice, steps[i].Testing);
@@ -201,6 +203,10 @@ public sealed class BasisTests : IDisposable
         Apply(logs, new Choice { DebugLogs = true }, version);
         Assert.All(Basis.BinaryFiles, f => Assert.Equal(Snapshot(logs)[f], fresh[1][f]));
         Assert.Contains("DebugDriver=1\r\nDebugLoading=0\r\nDebugPlayerPosition=1\r\n", System.Text.Encoding.Latin1.GetString(fresh[1]["AdamWin.ini"]));
+
+        // Debugtoetsen en laadlog alleen bij een teststart; zonder startlevel gelijk aan geen schakelaar
+        Assert.Contains("DebugSecretCommands=1\r\nDebugUseConsole=1\r\n", System.Text.Encoding.Latin1.GetString(fresh[5]["AdamWin.ini"]));
+        Assert.Equal(fresh[4]["AdamWin.ini"], fresh[6]["AdamWin.ini"]);
     }
 
     [Fact]
