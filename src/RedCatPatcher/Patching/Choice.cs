@@ -28,6 +28,7 @@ public sealed record Choice
         ("DebugLogs", Bool(DebugLogs)),
         ("Display", Display.Mode.ToString().ToLowerInvariant()),
         ("Resolution", Display.Resolution ?? AutoResolution),
+        ("RenderScale", Display.RenderScale.ToString(CultureInfo.InvariantCulture)),
         ("FpsLimit", Display.FpsLimit.ToString(CultureInfo.InvariantCulture)),
         ("VSync", Bool(Display.VSync)),
         ("Msaa", Display.Antialiasing),
@@ -53,6 +54,8 @@ public sealed record Choice
             {
                 Mode = Get("Display") is { } m && DisplayOptions.ParseMode(m) is { } mode ? mode : defaults.Mode,
                 Resolution = resolution != null && resolution != AutoResolution && DgVoodoo.IsValidResolution(resolution) ? resolution : null,
+                RenderScale = int.TryParse(Get("RenderScale"), NumberStyles.None, CultureInfo.InvariantCulture, out int scale)
+                    && scale is >= 1 and <= DisplayOptions.MaxRenderScale ? scale : defaults.RenderScale,
                 FpsLimit = int.TryParse(Get("FpsLimit"), NumberStyles.None, CultureInfo.InvariantCulture, out int fps) && fps <= 1000 ? fps : defaults.FpsLimit,
                 VSync = Flag("VSync", defaults.VSync),
                 Antialiasing = msaa != null && DgVoodoo.AntialiasingValues.Contains(msaa) ? msaa : defaults.Antialiasing,

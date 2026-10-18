@@ -135,6 +135,13 @@ public sealed record DisplayOptions
     public DisplayMode Mode { get; init; } = DisplayMode.Borderless;
     /// <summary><c>[Glide] Resolution</c>; null = standaard voor <see cref="Mode"/>.</summary>
     public string? Resolution { get; init; }
+    /// <summary>
+    /// Supersampling buiten een venster: dgVoodoo rendert op een veelvoud van <see cref="Resolution"/> en schaalt terug
+    /// naar het scherm (1 = uit). Geldt niet voor <c>unforced</c> en niet in een venster, waar de resolutie de
+    /// venstergrootte is.
+    /// </summary>
+    public int RenderScale { get; init; } = 1;
+    public const int MaxRenderScale = 4;
     /// <summary>Maximaal aantal beelden per seconde; 0 = geen limiet.</summary>
     public int FpsLimit { get; init; }
     public bool VSync { get; init; } = true;
@@ -144,6 +151,32 @@ public sealed record DisplayOptions
     public bool Crt { get; init; }
 
     public string GlideResolution => Resolution ?? (Mode == DisplayMode.Window ? DefaultWindowResolution : DgVoodoo.DefaultResolution);
+
+    /// <summary>
+    /// De waarde voor <c>[Glide] Resolution</c>: <see cref="GlideResolution"/> met <see cref="RenderScale"/> erin, en een
+    /// vaste resolutie ("1920x1080@60") in de vorm die dgVoodooCpl.exe zelf schrijft ("h:1920, v:1080, refrate:60").
+    /// </summary>
+    /// <summary><see cref="RenderScale"/> zoals hij telt: 1 in een venster en bij <c>unforced</c>.</summary>
+    public int EffectiveRenderScale =>
+        Mode == DisplayMode.Window || GlideResolution == "unforced" ? 1 : Math.Clamp(RenderScale, 1, MaxRenderScale);
+
+    public string ConfResolution
+    {
+        get
+        {
+            var value = GlideResolution;
+            int scale = EffectiveRenderScale;
+            if (Regex.Match(value, @"^(\d+)x(\d+)(?:@(\d+))?$") is { Success: true } fixedSize)
+            {
+                var conf = $"h:{int.Parse(fixedSize.Groups[1].Value) * scale}, v:{int.Parse(fixedSize.Groups[2].Value) * scale}";
+                return fixedSize.Groups[3].Success ? $"{conf}, refrate:{fixedSize.Groups[3].Value}" : conf;
+            }
+            if (scale == 1) return value;
+            if (Regex.Match(value, @"^(\d+)x$") is { Success: true } multiple) return $"{int.Parse(multiple.Groups[1].Value) * scale}x";
+            // max, max_isf, desktop, ... zonder eigen veelvoud: dgVoodoo kent "max_2x", "desktop_2x" enzovoort
+            return Regex.IsMatch(value, @"^(max|desktop)[a-z_]*$") && !Regex.IsMatch(value, @"_\d+x$") ? $"{value}_{scale}x" : value;
+        }
+    }
 
     public static DisplayMode? ParseMode(string value) => value.ToLowerInvariant() switch
     {
@@ -162,6 +195,8 @@ public sealed record DisplayOptions
         ("Glide", "ForceVerticalSync", VSync ? "true" : "false"),
         ("Glide", "Antialiasing", Antialiasing),
         // Alleen [Glide] Resolution: het spel tekent via Glide. [DirectX] Resolution (menu's via DirectDraw) blijft unforced.
-        ("Glide", "Resolution", GlideResolution),
+        ("Glide", "Resolution", ConfResolution),
+        // Terugschalen bij supersampling: bicubic is scherper dan dgVoodoo's standaard (bilinear)
+        ("GeneralExt", "Resampling", EffectiveRenderScale > 1 ? "bicubic" : "bilinear"),
     ];
 }

@@ -33,6 +33,8 @@ sealed class MainWindow : Window
     readonly TextBlock help = new() { TextWrapping = TextWrapping.Wrap, FontSize = 15, Foreground = Dim, MinHeight = 36 };
     readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap, FontSize = 15 };
     readonly Pad pad = new();
+    readonly Bindings bindings = new(Dim);
+    PixelSize screen = new(1920, 1080);
     Choice choice;
     Category? current;
     Control? focused;
@@ -44,13 +46,15 @@ sealed class MainWindow : Window
         choice = game.Wanted;
         Title = "RedCat Spookkasteel";
         Width = 760;
-        Height = 680;
+        Height = 760;
         MinWidth = 560;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         FontSize = 18;
         Styles.Add(CurrentTabStyle());
         Styles.Add(FocusStyle());
+        // dgVoodoo rendert op het hoofdscherm (CenterAppWindow); daar hangt de lijst met resoluties van af
+        if (Screens.Primary is { } primary) screen = primary.Bounds.Size;
 
         if (game.CanChoose) AddCategories();
 
@@ -122,56 +126,75 @@ sealed class MainWindow : Window
 
     void AddCategories()
     {
-        var c = choice;
-        AddCategory("Display", "Aspect ratio, display mode and sharpness.",
+        AddCategory("Display", "Aspect ratio, display mode and resolution.", null,
             OptionRow.Create("Aspect ratio",
                 "Widescreen gives a wider field of view and a HUD that isn't stretched. 16:10 fits the Steam Deck.",
                 [("4:3 (original)", (Widescreen?)null), ("16:9 widescreen", Widescreen.Wide16x9), ("16:10 widescreen", Widescreen.Wide16x10)],
-                x => x.Widescreen, (x, v) => x with { Widescreen = v }, c),
+                x => x.Widescreen,
+                // Een vaste resolutie hoort bij één beeldverhouding; bij een andere wordt het Native
+                (x, v) => x with
+                {
+                    Widescreen = v,
+                    Display = x.Display.GlideResolution.Contains('x') && char.IsDigit(x.Display.GlideResolution[^1]) && x.Display.Mode != DisplayMode.Window
+                        ? x.Display with { Resolution = Resolutions.Default(x.Display.Mode) } : x.Display,
+                }),
             OptionRow.Create("Display mode",
-                "Borderless works best with Alt+Tab and under Proton. Windowed is twice the game's resolution.",
+                "Borderless works best with Alt+Tab and under Proton. Fullscreen switches the screen mode. Windowed shows the game in a window.",
                 [("Borderless", DisplayMode.Borderless), ("Fullscreen", DisplayMode.Fullscreen), ("Windowed", DisplayMode.Window)],
-                x => x.Display.Mode, (x, v) => x with { Display = x.Display with { Mode = v } }, c),
-            OptionRow.Create("Render resolution",
-                "How sharply dgVoodoo2 draws the game. Auto: as large as the screen, 2x when windowed.",
-                [("Auto", (string?)null), ("Screen maximum", "max"), ("2x", "2x"), ("3x", "3x"), ("4x", "4x"),
-                 ("Desktop", "desktop"), ("Original (no scaling)", "unforced")],
-                x => x.Display.Resolution, (x, v) => x with { Display = x.Display with { Resolution = v } }, c));
-        AddCategory("Graphics", "Picture quality and frame rate.",
+                x => x.Display.Mode,
+                // In een venster is de resolutie de venstergrootte, dus bij het wisselen terug naar de standaard
+                (x, v) => x with
+                {
+                    Display = (v == DisplayMode.Window) == (x.Display.Mode == DisplayMode.Window)
+                        ? x.Display with { Mode = v }
+                        : x.Display with { Mode = v, Resolution = Resolutions.Default(v) },
+                }),
+            OptionRow.Create("Resolution",
+                "The resolution the game is drawn at; it is scaled to fill the screen. Native is the sharpest. " +
+                "Original is the game's own blurry look. Windowed: the size of the window.",
+                x => Resolutions.For(x, screen),
+                x => x.Display.GlideResolution, (x, v) => x with { Display = x.Display with { Resolution = v } }));
+        AddCategory("Graphics", "Picture quality and frame rate.", null,
             OptionRow.Create("Anti-aliasing",
                 "Smooths jagged edges (MSAA). Higher settings ask more of the graphics card.",
-                DgVoodoo.AntialiasingValues.Select(v => (v == "off" ? "Off" : v, v)),
-                x => x.Display.Antialiasing, (x, v) => x with { Display = x.Display with { Antialiasing = v } }, c),
+                DgVoodoo.AntialiasingValues.Select(v => (v == "off" ? "Off" : $"{v} MSAA", v)),
+                x => x.Display.Antialiasing, (x, v) => x with { Display = x.Display with { Antialiasing = v } }),
+            OptionRow.Create("Render scale",
+                "Supersampling: draws the game at 2 to 4 times the resolution and scales it down to the screen. " +
+                "Even smoother edges, but much heavier on the graphics card.",
+                Resolutions.RenderScales,
+                x => x.Display.RenderScale, (x, v) => x with { Display = x.Display with { RenderScale = v } }),
             OptionRow.Create("V-Sync",
                 "Turning V-Sync off can cause screen tearing.",
                 [("On", true), ("Off", false)],
-                x => x.Display.VSync, (x, v) => x with { Display = x.Display with { VSync = v } }, c),
+                x => x.Display.VSync, (x, v) => x with { Display = x.Display with { VSync = v } }),
             OptionRow.Create("Frame rate limit",
-                "Maximum frames per second. Unlimited: only V-Sync limits the frame rate.",
+                "Maximum frames per second. Unlimited: only V-Sync limits the frame rate. The game itself runs at about 60.",
                 new[] { 0, 30, 40, 60, 90, 120, 144 }.Select(v => (v == 0 ? "Unlimited" : $"{v} fps", v)),
-                x => x.Display.FpsLimit, (x, v) => x with { Display = x.Display with { FpsLimit = v } }, c),
+                x => x.Display.FpsLimit, (x, v) => x with { Display = x.Display with { FpsLimit = v } }),
             OptionRow.Create("CRT effect",
                 "Scanlines and a slightly curved picture, like an old monitor. Only visible in fullscreen.",
                 [("Off", false), ("On", true)],
-                x => x.Display.Crt, (x, v) => x with { Display = x.Display with { Crt = v } }, c));
-        AddCategory("Controls", "Keyboard and controller.",
-            OptionRow.Create("Movement keys",
-                "Default keys for new players and for the Default button in the game's options. Existing players keep their own keys.",
-                [("Arrow keys", false), ("WASD", true)],
-                x => x.Wasd, (x, v) => x with { Wasd = v }, c),
-            OptionRow.Create("Controller layout",
-                "Modern: A jump, B dodge, X shoot, LB/RB switch weapon, Back scores, Start menu. Classic: as in the original, " +
-                "the stick and four buttons. In the game only; the menus still use mouse and keyboard.",
-                [("Classic", false), ("Modern", true)],
-                x => x.Controller, (x, v) => x with { Controller = v }, c));
-        AddCategory("Advanced", "Troubleshooting.",
+                x => x.Display.Crt, (x, v) => x with { Display = x.Display with { Crt = v } }));
+        AddCategory("Controls", "Keyboard and controller layout.", bindings.View,
+            OptionRow.Create("Keyboard",
+                "Modern: move with W, A, S and D. Classic: the arrow keys, as in the original.",
+                [("Modern (WASD)", true), ("Classic (arrow keys)", false)],
+                x => x.Wasd, (x, v) => x with { Wasd = v }),
+            OptionRow.Create("Controller",
+                "Modern: a layout like today's games, with weapon switching, scores and the menu on the controller. " +
+                "Classic: as in the original, the stick and four buttons. Works in the game; the menus use mouse and keyboard.",
+                [("Modern", true), ("Classic", false)],
+                x => x.Controller, (x, v) => x with { Controller = v }));
+        AddCategory("Advanced", "Troubleshooting.", null,
             OptionRow.Create("Debug logs",
                 "Writes log files of the game and the menu to the game folder, to help track down problems.",
                 [("Off", false), ("On", true)],
-                x => x.DebugLogs, (x, v) => x with { DebugLogs = v }, c));
+                x => x.DebugLogs, (x, v) => x with { DebugLogs = v }));
+        ShowAll();
     }
 
-    void AddCategory(string name, string description, params OptionRow[] rows)
+    void AddCategory(string name, string description, Control? extra, params OptionRow[] rows)
     {
         var category = new Category(new Button
         {
@@ -187,11 +210,18 @@ sealed class MainWindow : Window
         foreach (var row in rows)
         {
             category.Panel.Children.Add(row.Button);
-            row.Show(choice);
             row.Button.Click += (_, _) => Change(row, +1);
             row.Button.GotFocus += (_, _) => OnFocus(row.Button, row.Help);
         }
+        if (extra != null) category.Panel.Children.Add(extra);
         categories.Add(category);
+    }
+
+    /// <summary>Alle regels opnieuw tonen: een keuze kan de waarden van andere regels veranderen (resolutie, render scale).</summary>
+    void ShowAll()
+    {
+        foreach (var row in categories.SelectMany(c => c.Rows)) row.Show(choice);
+        bindings.Show(choice);
     }
 
     void ShowCategory(Category category)
@@ -335,7 +365,7 @@ sealed class MainWindow : Window
     void Change(OptionRow row, int delta)
     {
         choice = row.Step(choice, delta);
-        row.Show(choice);
+        ShowAll();
         try
         {
             game.Save(choice);
@@ -388,16 +418,14 @@ sealed class OptionRow
     public Button Button { get; }
     public string Help { get; }
     readonly TextBlock value = new() { VerticalAlignment = VerticalAlignment.Center, Foreground = Brushes.White };
-    readonly string[] texts;
-    readonly Func<Choice, int> get;
-    readonly Func<Choice, int, Choice> set;
+    readonly Func<Choice, string> text;
+    readonly Func<Choice, int, Choice> step;
 
-    OptionRow(string label, string help, string[] texts, Func<Choice, int> get, Func<Choice, int, Choice> set)
+    OptionRow(string label, string help, Func<Choice, string> text, Func<Choice, int, Choice> step)
     {
         Help = help;
-        this.texts = texts;
-        this.get = get;
-        this.set = set;
+        this.text = text;
+        this.step = step;
         var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         grid.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
         Grid.SetColumn(value, 1);
@@ -413,22 +441,35 @@ sealed class OptionRow
         };
     }
 
-    /// <summary>
-    /// Een regel met vaste waarden. Een waarde die de speler of de patcher zelf heeft ingesteld en die niet in de lijst
-    /// staat (bijv. resolutie 1920x1080), komt vooraan, zodat hij niet zomaar verdwijnt.
-    /// </summary>
     public static OptionRow Create<T>(string label, string help, IEnumerable<(string Text, T Value)> items,
-        Func<Choice, T> get, Func<Choice, T, Choice> set, Choice current)
+        Func<Choice, T> get, Func<Choice, T, Choice> set)
     {
         var list = items.ToList();
-        var now = get(current);
-        if (!list.Any(i => EqualityComparer<T>.Default.Equals(i.Value, now))) list.Insert(0, (now?.ToString() ?? "", now));
-        return new OptionRow(label, help, [.. list.Select(i => i.Text)],
-            c => Math.Max(0, list.FindIndex(i => EqualityComparer<T>.Default.Equals(i.Value, get(c)))),
-            (c, i) => set(c, list[i].Value));
+        return Create(label, help, _ => list, get, set);
     }
 
-    public Choice Step(Choice c, int delta) => set(c, (get(c) + delta + texts.Length) % texts.Length);
+    /// <summary>
+    /// Een regel waarvan de waarden van de rest van de keuze afhangen (bijv. de resoluties van de weergave). Een waarde
+    /// die de speler of de patcher zelf heeft ingesteld en die niet in de lijst staat (bijv. max_isf), komt vooraan,
+    /// zodat hij niet zomaar verdwijnt.
+    /// </summary>
+    public static OptionRow Create<T>(string label, string help, Func<Choice, IEnumerable<(string Text, T Value)>> items,
+        Func<Choice, T> get, Func<Choice, T, Choice> set)
+    {
+        (List<(string Text, T Value)> List, int Index) Current(Choice c)
+        {
+            var list = items(c).ToList();
+            var now = get(c);
+            int index = list.FindIndex(i => EqualityComparer<T>.Default.Equals(i.Value, now));
+            if (index < 0) list.Insert(index = 0, (now?.ToString() ?? "", now));
+            return (list, index);
+        }
+        return new OptionRow(label, help,
+            c => { var (list, index) = Current(c); return list[index].Text; },
+            (c, delta) => { var (list, index) = Current(c); return set(c, list[(index + delta + list.Count) % list.Count].Value); });
+    }
 
-    public void Show(Choice c) => value.Text = $"‹  {texts[get(c)]}  ›";
+    public Choice Step(Choice c, int delta) => step(c, delta);
+
+    public void Show(Choice c) => value.Text = $"‹  {text(c)}  ›";
 }

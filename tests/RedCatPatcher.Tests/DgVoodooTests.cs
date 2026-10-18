@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using System.Text.RegularExpressions;
 using RedCatPatcher.Patching;
 
 namespace RedCatPatcher.Tests;
@@ -18,6 +19,7 @@ public sealed class DgVoodooTests : IDisposable
         [GeneralExt]
         FullscreenAttributes                 =
         FPSLimit                             = 0
+        Resampling                           = bilinear
         [Glide]
         Resolution                          = unforced
         Antialiasing                        = appdriven
@@ -128,6 +130,24 @@ public sealed class DgVoodooTests : IDisposable
         var directX = conf[conf.IndexOf("[DirectX]")..];
         Assert.Matches($@"(?m)^Resolution\s*= {expected}\s*$", glide);
         Assert.Matches(@"(?m)^Resolution\s*= unforced\s*$", directX); // menu's (DirectDraw) niet geforceerd
+    }
+
+    [Theory]
+    [InlineData(DisplayMode.Borderless, "max", 1, "max", "bilinear")]
+    [InlineData(DisplayMode.Borderless, "max", 2, "max_2x", "bicubic")]
+    [InlineData(DisplayMode.Fullscreen, "max_isf", 3, "max_isf_3x", "bicubic")]
+    [InlineData(DisplayMode.Borderless, "max_isf_2x", 2, "max_isf_2x", "bicubic")]
+    [InlineData(DisplayMode.Borderless, "1920x1080", 1, "h:1920, v:1080", "bilinear")]
+    [InlineData(DisplayMode.Borderless, "1920x1080@60", 2, "h:3840, v:2160, refrate:60", "bicubic")]
+    [InlineData(DisplayMode.Borderless, "2x", 2, "4x", "bicubic")]
+    [InlineData(DisplayMode.Borderless, "unforced", 2, "unforced", "bilinear")]
+    [InlineData(DisplayMode.Window, "2x", 2, "2x", "bilinear")] // in een venster is de resolutie de venstergrootte
+    [InlineData(DisplayMode.Window, "1280x960", 2, "h:1280, v:960", "bilinear")]
+    public void Install_RenderScale(DisplayMode mode, string resolution, int scale, string expected, string resampling)
+    {
+        var conf = InstallWith(new DisplayOptions { Mode = mode, Resolution = resolution, RenderScale = scale });
+        Assert.Matches($@"(?m)^Resolution\s*= {Regex.Escape(expected)}\s*$", GlideSection(conf));
+        Assert.Matches($@"(?m)^Resampling\s*= {resampling}\s*$", conf);
     }
 
     [Theory]
