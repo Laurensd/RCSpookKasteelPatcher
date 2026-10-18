@@ -23,8 +23,11 @@ sealed class GameFolder(string dir)
 
     public Choice Wanted => ini?.Wanted ?? new Choice();
 
-    /// <summary>De gekozen instellingen staan nog niet in de spelbestanden.</summary>
-    public bool NeedsApply => CanChoose && ini!.Applied != ini.Wanted;
+    /// <summary>De gekozen instellingen of een nieuwere fix (<see cref="Basis.Revision"/>) staan nog niet in de spelbestanden.</summary>
+    public bool NeedsApply => CanChoose && (ini!.Applied != ini.Wanted || ini.Revision < Basis.Revision);
+
+    /// <summary>Alleen een nieuwere fix staat nog niet in de spelbestanden; de keuze zelf is al toegepast.</summary>
+    public bool NeedsFixUpdate => NeedsApply && ini!.Applied == ini.Wanted;
 
     /// <summary>Bewaart de keuze in [Keuze]; toegepast wordt pas bij het spelen.</summary>
     public void Save(Choice wanted)
@@ -39,7 +42,7 @@ sealed class GameFolder(string dir)
     {
         if (!NeedsApply) return;
         Basis.Apply(dir, ini!.Wanted!, ini.BasisSha256);
-        ini = ini with { Applied = ini.Wanted };
+        ini = ini with { Applied = ini.Wanted, Revision = Basis.Revision };
         ini.Write(dir);
         Log("Settings applied from the base copy");
     }

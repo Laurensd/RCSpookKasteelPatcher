@@ -56,7 +56,7 @@ public sealed class BasisTests : IDisposable
             var content = new List<byte>(new byte[64]);
             var finds = patches.Where(p => p.File == file).SelectMany(p => p.For(version.Build)).Select(r => r.Find);
             foreach (var find in finds.DistinctBy(Convert.ToHexString)) { content.AddRange(find); content.AddRange(new byte[64]); }
-            if (file == Controller.File) content.AddRange(ControllerTable());
+            if (file == Controller.File) content.AddRange([.. ControllerTable(), .. new byte[64], .. JoystickSearchTests.Probe([0x50, 0xa2, 0x64, 0x00])]);
             content.AddRange(new byte[64]);
             files[file] = [.. content];
         }
@@ -246,7 +246,7 @@ public sealed class BasisTests : IDisposable
         Assert.Contains("[Keuze]\r\nWidescreen=16:10\r\nWasd=0\r\nController=1\r\nDebugLogs=1\r\nDisplay=window\r\n", text);
         Assert.Contains("[Toegepast]\r\nWidescreen=4:3\r\n", text);
         Assert.Contains("Resolution=auto\r\n", text);
-        Assert.EndsWith("BasisSha256=ABC123\r\n", text);
+        Assert.EndsWith("BasisSha256=ABC123\r\nRevision=2\r\n", text);
     }
 
     [Fact]

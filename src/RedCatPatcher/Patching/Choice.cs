@@ -71,10 +71,10 @@ public sealed record Choice
 /// <c>RedCatLauncher.ini</c> in de spelmap: wat de speler wil (<c>[Keuze]</c>) en wat er nu in de bestanden staat
 /// (<c>[Toegepast]</c>, met de hash van de basis). De patcher en de launcher schrijven het allebei.
 /// </summary>
-public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisSha256)
+public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisSha256, int Revision = Basis.Revision)
 {
     public const string FileName = "RedCatLauncher.ini";
-    private const string WantedSection = "Keuze", AppliedSection = "Toegepast", BasisKey = "BasisSha256";
+    private const string WantedSection = "Keuze", AppliedSection = "Toegepast", BasisKey = "BasisSha256", RevisionKey = "Revision";
 
     /// <summary>Het keuzebestand, of null als het er niet is (gepatcht met een oudere patcher).</summary>
     public static LauncherIni? Read(string gameDir)
@@ -85,7 +85,9 @@ public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisS
         return new LauncherIni(
             ini.TryGetValue(WantedSection, out var wanted) ? Choice.FromIni(wanted) : null,
             ini.TryGetValue(AppliedSection, out var applied) ? Choice.FromIni(applied) : null,
-            applied != null && applied.TryGetValue(BasisKey, out var sha) && sha.Length > 0 ? sha : null);
+            applied != null && applied.TryGetValue(BasisKey, out var sha) && sha.Length > 0 ? sha : null,
+            // Zonder Revision: geschreven vóór revisie 2
+            applied != null && applied.TryGetValue(RevisionKey, out var revision) && int.TryParse(revision, out int r) ? r : 1);
     }
 
     public void Write(string gameDir)
@@ -100,7 +102,7 @@ public sealed record LauncherIni(Choice? Wanted, Choice? Applied, string? BasisS
         }
         Section(WantedSection, Wanted, "Wat de speler wil (launcher of patcher)");
         Section(AppliedSection, Applied, "Wat er nu in de spelbestanden staat; niet zelf aanpassen",
-            BasisSha256 == null ? [] : [(BasisKey, BasisSha256)]);
+            [.. BasisSha256 == null ? [] : new[] { (BasisKey, BasisSha256) }, (RevisionKey, Revision.ToString(CultureInfo.InvariantCulture))]);
 
         var path = Path.Combine(gameDir, FileName);
         File.WriteAllText(path + ".tmp", text.ToString(), Encoding.Latin1);

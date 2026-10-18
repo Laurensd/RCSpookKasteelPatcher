@@ -375,7 +375,8 @@ sealed class MainWindow : Window
     }
 
     void UpdatePending() =>
-        ShowStatus(game.NeedsApply ? "Changed: applied when you press Play." : "");
+        ShowStatus(game.NeedsFixUpdate ? "A game fix is installed when you press Play."
+            : game.NeedsApply ? "Changed: applied when you press Play." : "");
 
     async void Play()
     {
