@@ -110,7 +110,11 @@ sealed class MainWindow : Window
         timer.Tick += (_, _) => OnPad(pad.Poll());
         timer.Start();
         Closed += (_, _) => timer.Stop();
-        Opened += (_, _) => play.Focus(NavigationMethod.Directional);
+        Opened += (_, _) =>
+        {
+            GameIcon.Apply(this, Path.Combine(game.Dir, GameFolder.GameExe));
+            play.Focus(NavigationMethod.Directional);
+        };
     }
 
     void AddRows()

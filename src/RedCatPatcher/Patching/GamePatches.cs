@@ -55,6 +55,26 @@ public static class GamePatches
         // RedCat.exe wacht op menu en spel zonder berichten te verwerken; het spelvenster blijft dan soms achter.
         // Fix: eigen wachtlus die berichten verwerkt en het spelvenster naar voren haalt (zie GameForeground).
         GameForeground.Patch,
+
+        // Het spelvenster registreert zijn klasse met LoadIconA(NULL, IDI_APPLICATION): het standaardicoon van
+        // Windows, terwijl RcHcGame.dat een eigen icoon heeft (groep 107). In de taakbalk staat dan een leeg
+        // venstertje. Fix: LoadIconA(hInstance, 107); edi is daar hInstance (ook het veld hInstance van WNDCLASS).
+        // "push 7F00h; push ebx" (6 bytes) wordt "push 107; push edi; 3x nop".
+        new("game-icon", "RcHcGame.dat",
+            "Spelvenster heeft het RedCat-icoon in de taakbalk",
+            [new(Hex("68 00 7f 00 00 53 89 46 50 ff 15 28 a2 64 00"),
+                 Hex("6a 6b 57 90 90 90 89 46 50 ff 15 28 a2 64 00"))],
+            Xp2004:
+            [new(Hex("68 00 7f 00 00 53 89 46 50 ff 15 3c 37 8a 00"),
+                 Hex("6a 6b 57 90 90 90 89 46 50 ff 15 3c 37 8a 00"))]),
+
+        // RedCat.exe zet een zwart schermvullend venster met een eigen taakbalkknop (WS_EX_APPWINDOW) achter menu en
+        // spel. Het grote en kleine icoon komen uit LoadIconA(hInstance, 7F00h), een id dat niet in het bestand
+        // staat: geen icoon. Fix: id 101, het icoon van RedCat.exe (esi is hInstance).
+        new("redcat-icon", "RedCat.exe",
+            "Achtergrondvenster van RedCat.exe heeft het RedCat-icoon in de taakbalk",
+            [new(Hex("68 00 7f 00 00 56 89 44 24 30 ff d7 68 00 7f 00 00 56 89 44 24 2c ff d7"),
+                 Hex("6a 65 90 90 90 56 89 44 24 30 ff d7 6a 65 90 90 90 56 89 44 24 2c ff d7"))]),
     ];
 
     private static byte[] Hex(string s) => Convert.FromHexString(s.Replace(" ", ""));
