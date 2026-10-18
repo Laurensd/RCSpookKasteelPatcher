@@ -35,7 +35,7 @@ sealed class Bindings
         };
     }
 
-    static IEnumerable<(string Action, string Keyboard, string Controller)> For(bool wasd, bool modern)
+    static IEnumerable<(string Action, string Keyboard, string Controller)> For(bool wasd, bool modern, bool menus)
     {
         var (forward, back, left, right) = wasd ? ("W", "S", "A", "D") : ("↑", "↓", "←", "→");
         string Pad(string button) => modern ? button : "–";
@@ -54,6 +54,8 @@ sealed class Bindings
             ("Scores", "Tab", Pad("Back")),
             ("Menu", "Esc", Pad("Start")),
             ("Pause", "P", "–"),
+            ("Menus: pointer, click", "Mouse", menus ? "Left stick, A" : "–"),
+            ("Menus: back, confirm", "Esc, Enter", menus ? "B, Start" : "–"),
         ];
     }
 
@@ -84,6 +86,6 @@ sealed class Bindings
             row++;
         }
         Add("Action", "Keyboard", "Controller", header: true);
-        foreach (var (action, keyboard, controller) in For(c.Wasd, c.Controller)) Add(action, keyboard, controller, header: false);
+        foreach (var (action, keyboard, controller) in For(c.Wasd, c.Controller, c.MenuController)) Add(action, keyboard, controller, header: false);
     }
 }

@@ -47,10 +47,13 @@ sealed class GameFolder(string dir)
         Log("Settings applied from the base copy");
     }
 
+    /// <summary>RedCat.exe zoals het laatst gestart is.</summary>
+    public Process? Started { get; private set; }
+
     public void Start()
     {
         if (!HasGame) throw new PatchException($"{GameExe} not found in {dir}. Put the launcher in the game folder, next to {GameExe}.");
-        Process.Start(new ProcessStartInfo(Path.Combine(dir, GameExe)) { WorkingDirectory = dir, UseShellExecute = false });
+        Started = Process.Start(new ProcessStartInfo(Path.Combine(dir, GameExe)) { WorkingDirectory = dir, UseShellExecute = false });
     }
 
     /// <summary>Toepassen en starten. Geeft een foutmelding terug, of null als het spel gestart is.</summary>
@@ -67,6 +70,12 @@ sealed class GameFolder(string dir)
             Log($"Error: {e.Message}");
             return e.Message;
         }
+    }
+
+    /// <summary>Na het starten: de controller in de menu's tot RedCat.exe stopt, als de speler dat wil.</summary>
+    public void RunMenuController()
+    {
+        if (Started != null && Wanted.MenuController) MenuPad.Run(Started);
     }
 
     public static bool IsExpected(Exception e) => e is PatchException or IOException or UnauthorizedAccessException or Win32Exception;

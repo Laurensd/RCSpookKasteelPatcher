@@ -15,6 +15,11 @@ public sealed record Choice
     public bool Wasd { get; init; }
     public bool Controller { get; init; }
     public bool DebugLogs { get; init; }
+    /// <summary>
+    /// Alleen voor de launcher: de controller in de menu's als muis (het menu leest zelf geen joystick). Verandert geen
+    /// spelbestanden.
+    /// </summary>
+    public bool MenuController { get; init; } = true;
     public DisplayOptions Display { get; init; } = new();
 
     /// <summary>Waarde in RedCatLauncher.ini voor <c>Resolution</c> als die van de weergave afhangt.</summary>
@@ -33,6 +38,7 @@ public sealed record Choice
         ("VSync", Bool(Display.VSync)),
         ("Msaa", Display.Antialiasing),
         ("Crt", Bool(Display.Crt)),
+        ("MenuController", Bool(MenuController)),
     ];
 
     /// <summary>Leest een sectie uit RedCatLauncher.ini. Een ontbrekende of onleesbare sleutel krijgt de standaardwaarde.</summary>
@@ -50,6 +56,7 @@ public sealed record Choice
             Wasd = Flag("Wasd", false),
             Controller = Flag("Controller", false),
             DebugLogs = Flag("DebugLogs", false),
+            MenuController = Flag("MenuController", true),
             Display = new DisplayOptions
             {
                 Mode = Get("Display") is { } m && DisplayOptions.ParseMode(m) is { } mode ? mode : defaults.Mode,
