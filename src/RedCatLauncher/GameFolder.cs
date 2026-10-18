@@ -41,12 +41,12 @@ sealed class GameFolder(string dir)
         Basis.Apply(dir, ini!.Wanted!, ini.BasisSha256);
         ini = ini with { Applied = ini.Wanted };
         ini.Write(dir);
-        Log("Keuze toegepast vanuit de basis");
+        Log("Settings applied from the base copy");
     }
 
     public void Start()
     {
-        if (!HasGame) throw new PatchException($"{GameExe} niet gevonden in {dir}. Zet de launcher in de spelmap, naast {GameExe}.");
+        if (!HasGame) throw new PatchException($"{GameExe} not found in {dir}. Put the launcher in the game folder, next to {GameExe}.");
         Process.Start(new ProcessStartInfo(Path.Combine(dir, GameExe)) { WorkingDirectory = dir, UseShellExecute = false });
     }
 
@@ -61,7 +61,7 @@ sealed class GameFolder(string dir)
         }
         catch (Exception e) when (IsExpected(e))
         {
-            Log($"Fout: {e.Message}");
+            Log($"Error: {e.Message}");
             return e.Message;
         }
     }

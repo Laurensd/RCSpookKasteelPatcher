@@ -8,7 +8,7 @@ namespace RedCatLauncher;
 /// </summary>
 sealed class Pad
 {
-    public enum Action { None, Up, Down, Left, Right, Accept, Back, Start }
+    public enum Action { None, Up, Down, Left, Right, Accept, Back, Start, PreviousTab, NextTab }
 
     [StructLayout(LayoutKind.Sequential)]
     struct XInputState
@@ -22,7 +22,7 @@ sealed class Pad
     [DllImport("xinput1_4.dll")]
     static extern uint XInputGetState(uint userIndex, out XInputState state);
 
-    const ushort DUp = 0x0001, DDown = 0x0002, DLeft = 0x0004, DRight = 0x0008, StartButton = 0x0010, A = 0x1000, B = 0x2000;
+    const ushort DUp = 0x0001, DDown = 0x0002, DLeft = 0x0004, DRight = 0x0008, StartButton = 0x0010, LB = 0x0100, RB = 0x0200, A = 0x1000, B = 0x2000;
     const ushort Directions = DUp | DDown | DLeft | DRight;
     const short Dead = 16000;
     static readonly TimeSpan RepeatDelay = TimeSpan.FromMilliseconds(400), RepeatEvery = TimeSpan.FromMilliseconds(120);
@@ -59,6 +59,8 @@ sealed class Pad
         if ((pressed & A) != 0) return Action.Accept;
         if ((pressed & B) != 0) return Action.Back;
         if ((pressed & StartButton) != 0) return Action.Start;
+        if ((pressed & LB) != 0) return Action.PreviousTab;
+        if ((pressed & RB) != 0) return Action.NextTab;
 
         var direction = (ushort)(now & Directions);
         if ((pressed & Directions) != 0) nextRepeat = DateTime.UtcNow + RepeatDelay;

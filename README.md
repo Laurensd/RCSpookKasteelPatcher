@@ -55,11 +55,19 @@ spelbestand of een onbekende update, dan stopt hij zonder te patchen en meldt hi
 
 ### Launcher
 
-De patcher zet `RedCatLauncher.exe` in de spelmap, naast `RedCat.exe`. Daar kies je zonder opnieuw te patchen:
-beeldverhouding (4:3, 16:9, 16:10), WASD of pijltjestoetsen, de controller-indeling, weergave (randloos, volledig
-scherm, venster), renderresolutie, anti-aliasing, vsync, fps-limiet, CRT-effect en logbestanden. **Spelen** past een
-gewijzigde keuze toe en start het spel. Te bedienen met muis, toetsenbord of controller (d-pad of stick kiest en
-wisselt, A wisselt of speelt, Start speelt, B sluit), dus ook op de Steam Deck in de gamemodus.
+De patcher zet `RedCatLauncher.exe` in de spelmap, naast `RedCat.exe`. Daar kies je zonder opnieuw te patchen, in
+vier categorieën (de launcher is Engelstalig):
+
+| Categorie | Instellingen |
+|---|---|
+| Display | Beeldverhouding (4:3, 16:9, 16:10), weergave (randloos, volledig scherm, venster), renderresolutie |
+| Graphics | Anti-aliasing, V-Sync, fps-limiet, CRT-effect |
+| Controls | Bewegingstoetsen (pijltjes of WASD), controller-indeling (Classic of Modern) |
+| Advanced | Logbestanden |
+
+**Play** past een gewijzigde keuze toe en start het spel. Te bedienen met muis, toetsenbord of controller (d-pad of
+stick kiest en wisselt, LB/RB of PgUp/PgDn wisselt de categorie, A wisselt of speelt, Start speelt, B sluit), dus ook
+op de Steam Deck in de gamemodus.
 
 | Startoptie | Wat het doet |
 |---|---|
