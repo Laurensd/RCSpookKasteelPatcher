@@ -1,7 +1,7 @@
 # Ontwerp: launcher naast `RedCat.exe`
 
-Ontwerpnotitie; de stappen 1–5 uit "Aanbevolen volgorde" zijn gebouwd. Afspraak (17-10-2026): de opties blijven voorlopig in de patcher; later komt er een
-aparte launcher die de code uit `Patching/` hergebruikt. Deze notitie verdeelt de huidige opties over drie plekken en
+Ontwerpnotitie; de stappen 1–5 uit "Aanbevolen volgorde" zijn gebouwd (`src/RedCatLauncher`). Afspraak (17-10-2026): de
+opties blijven ook in de patcher werken; de launcher hergebruikt de code uit `Patching/`. Deze notitie verdeelt de huidige opties over drie plekken en
 beschrijft wat er nodig is om een keuze op een geïnstalleerde map telkens opnieuw toe te passen en terug te draaien.
 
 | Groep | Wat | Waar |
@@ -35,7 +35,7 @@ Eenmalig of afhankelijk van de disc; er valt niets te kiezen dat een speler late
 | Disc-controle | `Disc/DiscVerifier.cs` | Niets (alleen hashes) | Heeft de disc nodig |
 | Officiële updates | `Updates/OfficialUpdate.cs` | `RcHcGame.dat`, 14 ini's in `settings`, 28 geluiden, help (Win98); alleen `RcHcGame.dat` (XP) | Heeft de update-exe's nodig; bepaalt de versie |
 | Versieherkenning | `Patching/GameVersion.cs` | Niets | Moet op de bestanden vóór de fixes |
-| Crash- en menufixes | `Patching/GamePatches.cs` | `RcHcGame.dat` (`font-glyph-metrics`), `RcHcMenu.dat` (`menu-32bit`, `dialog-center`, `menu-no-modeswitch`, `menu-dao36`, `menu-agent-help` + `Agent\RedCat.ini`) | Zonder deze fixes werkt het spel niet; niemand wil ze uit |
+| Crash-, menu- en vensterfixes | `Patching/GamePatches.cs` | `RcHcGame.dat` (`font-glyph-metrics`, `game-icon`), `RcHcMenu.dat` (`menu-32bit`, `dialog-center`, `menu-no-modeswitch`, `menu-dao36`, `menu-agent-help` + `Agent\RedCat.ini`), `RedCat.exe` (`game-foreground`, `redcat-icon`) | Zonder deze fixes werkt het spel niet; niemand wil ze uit |
 | dgVoodoo2 installeren | `Patching/DgVoodoo.cs` (`Install`) | `DDraw.dll`, `D3DImm.dll`, `Glide*.dll`, `dgVoodooCpl.exe`, `dgVoodoo.conf` met de vaste sleutels (`VRAM`, watermerken, `CenterAppWindow`) | Download met hashcontrole; `--no-dgvoodoo` blijft een patcheroptie |
 | Logbestanden uit (standaard) | `Patching/DebugLogs.cs` | Zie groep 2, `--debug-logs` | De patcher zet de standaard; de launcher mag hem omzetten |
 | Snelkoppelingen, Steam | `Install/`, `Steam/` | `.lnk`/`.desktop`, `shortcuts.vdf`, `config.vdf` | Eenmalig, buiten de spelmap; Steam moet dicht zijn |
@@ -170,7 +170,7 @@ de bestanden die de launcher aanpast, bijvoorbeeld in `RedCatPatcher\basis\`:
 | `RcHcGame.dat` | Fixes, logs, breedbeeld, joysticktabel |
 | `RcHcMenu.dat` | Fixes, logs |
 | `GlideDrv.dll` | Logs, breedbeeld |
-| `RedCat.exe` | Fix (spel naar de voorgrond) |
+| `RedCat.exe` | Fixes (spel naar de voorgrond, icoon) |
 | `AdamWin.ini`, `settings\static.ini`, `settings\PlayerDef.ini`, `settings\HUDIcon.ini` | Originele waarden voor FOV, toetsen en iconposities |
 
 Bij "Spelen" vergelijkt de launcher de gewenste keuze met de toegepaste keuze (beide in het keuzebestand). Verschillen
@@ -317,7 +317,7 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 
 1. ~~**`HUDIcon.ini` idempotent maken**~~ (gedaan: breedbeeld-INI's zijn herhaalbaar en omkeerbaar).
 2. ~~**`Patching/` op byte-arrays**~~ (gedaan): `Basis.Build` bouwt basis + keuze (`Choice`) in het geheugen op tot
-   de drie bestanden, `Basis.Apply` schrijft ze en zet de INI-sleutels en `dgVoodoo.conf`. Tests over alle combinaties
+   de vier binaire bestanden (`Basis.BinaryFiles`), `Basis.Apply` schrijft ze en zet de INI-sleutels en `dgVoodoo.conf`. Tests over alle combinaties
    (`BasisTests`): elke keuze vanaf elke vorige keuze geeft dezelfde bestanden als een verse installatie.
 3. ~~**De patcher bewaart de basis en schrijft `RedCatLauncher.ini`**~~ (gedaan). De patcher gebruikt zelf ook
    `Basis.Apply`; de bestanden zijn byte voor byte gelijk aan die van v0.2.0. Zonder keuze-opties op de opdrachtregel
