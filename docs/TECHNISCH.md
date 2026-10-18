@@ -673,6 +673,7 @@ De toets werkt alleen als vlag `+0x39C` van de applicatie aan staat (`0x4BEFCB`)
 (`0x4BC7F5`–`0x4BC909`) als **`DebugSecretCommands=1`**, of als **`Console=1`** in `[General]` van het
 `Player%d.ini`-bestand van de huidige speler staat (`0x43AEB0` geeft `.\Settings\Player%d.ini`). Die tweede route
 kent het menu niet; het menu schrijft met `TIniFile`/`WritePrivateProfileString`, dus een extra sleutel blijft staan.
+De launcher gebruikt die route voor testspeler 10 (tabblad Testing, "Console and cheats").
 
 Commando's (`HELP` geeft de lijst, hoofdletters maken niet uit):
 
