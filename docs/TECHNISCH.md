@@ -417,7 +417,7 @@ Van de drie routes is (a), de eigen joystickcode, het robuustst:
   Deck biedt Steam Input de knoppen aan als zo'n virtuele Xbox-controller.
 - (b) Een XInput→toetsenbordlaag (proxy-DLL of hulpproces) kan meer (d-pad, triggers, rechterstick, het menu), maar is
   een apart stuk native code dat moet meelopen met dgVoodoo2's DLL's en onder Proton apart getest moet worden. Dat past
-  beter in de geplande launcher; zie "Nog open".
+  beter bij de launcher (`docs/LAUNCHER.md`); zie "Beperkingen en nog open".
 - (c) Een Steam Input-indeling werkt alleen via Steam en is per gebruiker en per snelkoppeling opgeslagen; meeleveren kan
   niet zonder in Steams configuratie te schrijven. De standaardindeling van Steam voor niet-Steam-games (Gamepad,
   rechtertrackpad als muis) volstaat bovendien met deze patch.

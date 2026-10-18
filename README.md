@@ -73,6 +73,7 @@ op de Steam Deck in de gamemodus.
 |---|---|
 | `--spelen` | Zonder venster: de keuze toepassen en het spel starten (handig als Steam-startoptie). Bij een fout verschijnt het venster met de melding |
 | `--software` | Tekenen zonder videokaart, als het venster leeg of zwart blijft |
+| `--map <map>` | Een andere spelmap dan die waar de launcher staat |
 
 De keuze staat in `RedCatLauncher.ini` in de spelmap. De launcher bouwt de spelbestanden op uit een kopie van de
 originelen (`RedCatPatcher\basis`), die de patcher bewaart; een installatie van een oudere patcher moet daarvoor één
@@ -170,6 +171,9 @@ de patcher het level klaar en start je `RcHcGame.dat -game` zelf via Proton/Wine
 | Naamvenster/afsluitvraag buiten beeld, menu lijkt vast | Dialogen centreren op het hoofdscherm (`RcHcMenu.dat`) |
 | Menu in geëmuleerd 16-bit kleur | Menu kiest 32-bit (`RcHcMenu.dat`) |
 | Menu zet het bureaublad op 800×600 (andere monitoren schuiven op, alt-tab hapert) | Menu laat de resolutie ongemoeid en staat gecentreerd op het hoofdscherm (`RcHcMenu.dat`) |
+| Spel blijft na Start! achter het bureaublad, alleen bereikbaar met alt-tab | `RedCat.exe` blijft reageren en haalt het spelvenster naar voren (`RedCat.exe`) |
+| Knop Help geeft een DAO-foutmelding of opent Edge in plaats van de helptekst | Menu gebruikt DAO 3.6 uit Windows; de agent toont de helpteksten zelf, zonder WinHelp (`RcHcMenu.dat`, `Agent\RedCat.ini`) |
+| Leeg standaardicoon in de taakbalk | Spel en `RedCat.exe` tonen het RedCat-icoon (`RcHcGame.dat`, `RedCat.exe`) |
 | Klein venster, oude DirectX/Glide-problemen | dgVoodoo2, schermvullend 4:3 |
 | Wazig beeld op moderne schermen (640×480 opgerekt) | dgVoodoo2 rendert op schermresolutie (`--resolution`) |
 | Cd nodig | Niet meer: alles staat lokaal |
