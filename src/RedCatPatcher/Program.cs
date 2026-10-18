@@ -147,6 +147,8 @@ try
     Console.WriteLine("Fixes:");
     foreach (var patch in GamePatches.All.Concat(choice.DebugLogs ? [] : DebugLogs.PatchesFor(version)))
         Console.WriteLine($"  [ok] {patch.Description}");
+    int helpTopics = AgentHelp.Apply(outDir);
+    Console.WriteLine($"  [ok] {helpTopics} helpteksten uit REDCAT.HLP naar Agent\\{AgentHelp.IniName}");
 
     if (choice.Widescreen != null || choice.Wasd || choice.Controller)
     {

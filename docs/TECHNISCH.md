@@ -160,7 +160,6 @@ wel, muis bewegen en geen invoer wel → wel. Met het echte spel en dgVoodoo (wa
 voren, en de hele ronde spel → menu → Stoppen → Ja sluit `RedCat.exe` netjes af. Niet na te bootsen met het echte
 spel: invoer binnen het tijdvenster, omdat het spelvenster hier binnen ~0,6 s verschijnt. De XP-build is niet getest;
 heeft die een andere vensterklasse, dan doet stap 3 niets en blijft alleen het hangen weg.
-
 ## Fix 6 — icoon in de taakbalk (`RcHcGame.dat`, `RedCat.exe`)
 
 Spel en `RedCat.exe` hebben elk een eigen icoon (groepsicoon 107 in `RcHcGame.dat`, 101 in `RedCat.exe`), maar hun
@@ -177,6 +176,75 @@ vensters gebruiken het niet. In de taakbalk staan dan twee lege standaardiconen:
 Getest op Windows 11 met 1.0.0: `GetClassLongPtr(GCL_HICON)` geeft voor beide vensters het RedCat-icoon. De launcher
 leest het icoon bij het openen uit `RedCat.exe` in de spelmap (`LoadImageW` + `WM_SETICON`), zodat het niet in deze
 repository staat.
+
+## Fix 7 — helpknop: DAO 3.6 in plaats van DAO 3.5 (`RcHcMenu.dat`)
+
+Symptoom: de knop Help in het menu geeft "Er is een onverwachte fout opgetreden in RedCat Menu" met
+`DAO.CreateEngineFactory failed: <GetDAOEngine De DAO-database-engine kon niet geïnitialiseerd worden.>`
+(ook in `rchcmenu.log`).
+
+Oorzaak: Help opent de hulp-agent, die zijn tekstballonnen leest uit `Agent\RedCat.adb`, een Access-database (Jet 3.0,
+tabellen `AgentBln` en `AgentBlnItem`). Het menu maakt de engine aan met de Davilex-unit `OpDAO35`
+(`0x4BC5D0`): `CoGetClassObject` op de CLSID van DAO 3.5 `DBEngine` `{00000010-…}` of `PrivDBEngine` `{00000011-…}`,
+dan `IClassFactory2::CreateInstanceLic` met de runtime-licentiesleutel van DAO 3.5 voor `_DBEngine` `{00000021-…}`,
+en houdt `MSJET35.dll` geladen met `LoadLibrary`. DAO 3.5 en Jet 3.5 zitten niet in Windows 10/11 (de installer van het
+spel zette ze neer). Zelfs als de DLL's er staan, zijn ze meestal niet geregistreerd.
+
+Windows heeft wel DAO 3.6 (`dao360.dll`, 32-bit, geregistreerd) met Jet 4.0 (`msjet40.dll`). Die gebruiken dezelfde
+interfaces met dezelfde IID's; MFC kiest net zo tussen beide met alleen een andere CLSID en licentiesleutel. Jet 4.0
+opent Jet 3-databases zonder ze om te zetten.
+
+Fix (drie vervangingen, even lang):
+
+| Wat | DAO 3.5 | DAO 3.6 |
+|---|---|---|
+| CLSID `DBEngine` / `PrivDBEngine` (DATA, `0x5719CC`) | `{00000010-0000-0010-8000-00AA006D2EA4}` / `…11…` | `{00000100-…}` / `{00000101-…}` |
+| Licentiesleutel (Delphi-string) | `mbmabptebkjcdlgtjmskjwtsdhjbmkmwtrak` | `mjgcqcejfchcijecpdhckcdjqigdejfccjri` |
+| `LoadLibrary` | `MSJET35.dll` | `MSJET40.dll` |
+
+Gecontroleerd: DAO 3.6 (`DAO.PrivateDBEngine.36`, 32-bit) opent `RedCat.adb` en leest beide tabellen. Getest: Help
+toont de ballon van de agent met de vragen voor het huidige scherm.
+
+## Fix 8 — helpteksten van de agent zonder WinHelp (`RcHcMenu.dat`, `Agent\RedCat.ini`)
+
+Symptoom: een klik op een vraag in de ballon van de agent opent Edge op een Microsoft-pagina; er komt geen helptekst.
+
+Oorzaak: elke vraag (`AgentBlnItem`, `BlnItemKind = 1`) heeft een contextnaam als `ActionText` (bijv. `h_Adventure`).
+Het menu trimt die (`0x409974`) en roept `0x54BEC0` aan met het helpbestand (`ExtractFilePath(ExeName)` +
+`Agent\RedCat.HLP`) en de naam. Die functie zet `Application.HelpFile` tijdelijk op dat bestand en doet
+`HelpCommand(HELP_CONTEXTPOPUP, id)`; `WinHelpA` start `winhlp32.exe`, en dat bestaat sinds Windows 10 alleen nog als
+stub die naar de website verwijst.
+
+`REDCAT.HLP` is een klein WinHelp 4-bestand (29 kB) zonder compressie: `|SYSTEM`-flags 0, geen `|Phrases`.
+`Patching/AgentHelp.cs` leest het bij het patchen uit:
+
+- De interne bestanden staan in een B+-boom (directory, `|CONTEXT`); `|CONTEXT` koppelt de hash van een contextnaam
+  aan een TOPICOFFSET. De hash: `h = h * 43 + waarde(teken)`, met A–Z (hoofdletterongevoelig) als 0x11–0x2A en `_` als
+  0x0D. De namen komen uit `Agent\REDCAT.ghc` (een RoboHELP-bestand dat op de cd is meegekomen); alle 38 kloppen.
+- `|TOPIC` bestaat uit blokken van 4 kB met een kop van 12 bytes; records (TOPICLINK) kunnen over een blokgrens lopen.
+  Een onderwerp begint met een record van type 2 (titel), gevolgd door tekstrecords (0x20): de strings in LinkData2,
+  met in LinkData1 per string een opmaakcommando (0x80 lettertype, 0x81 regeleinde, 0x82 einde alinea, …).
+- TOPICOFFSET = blok × 0x8000 + het aantal teksttekens (som van DataLen2) sinds het eerste record dat in dat blok
+  begint.
+
+Het resultaat staat in `Agent\RedCat.ini` (Windows-1252), per contextnaam een sectie met `Title` en `Text`, en `|` als
+regeleinde. De herhaalde titel bovenaan de tekst valt weg.
+
+De menupatch vervangt de functie `0x54BEC0` (204 bytes, met dezelfde aanroep: `eax` = pad, `edx` = naam) door:
+
+```
+GetPrivateProfileStringA(naam, "Title", naam, titel, 256, pad)
+GetPrivateProfileStringA(naam, "Text", "", tekst, 2048, pad)   ; leeg: niets tonen
+| → LF in tekst
+MessageBoxA(GetActiveWindow(), tekst, titel, MB_ICONINFORMATION)
+```
+
+Alle API's staan al in de importtabel. De strings `Title`, `Text` en `""` staan achter de code in dezelfde 204 bytes.
+De absolute adressen zijn veilig: het menu heeft geen `DYNAMICBASE` en laadt altijd op `0x400000`. Het pad
+`Agent\RedCat.HLP` wordt `Agent\RedCat.ini` (even lang).
+
+Getest (Windows 11): Help → "Wat is Avontuur?" toont een berichtvenster met de titel en de drie alinea's, gecentreerd
+op het menu; na OK werkt het menu gewoon verder.
 
 ## dgVoodoo2
 

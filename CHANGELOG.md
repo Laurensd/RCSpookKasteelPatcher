@@ -13,6 +13,8 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 ### Opgelost
 - Spel, het zwarte achtergrondvenster van `RedCat.exe` en de launcher hebben het RedCat-icoon in de taakbalk in plaats van een leeg standaardicoon.
 - Het spel komt na Start! in het menu op de voorgrond; je hoeft er niet meer met alt-tab naartoe. Dit ging vooral mis bij de eerste start na het patchen, als je tijdens het laden klikte (bijv. een dubbelklik op Start!) of een toets indrukte: `RedCat.exe` wachtte op het spel zonder berichten te verwerken, waardoor het zwarte venster "reageert niet" werd en de voorgrond vasthield. `RedCat.exe` wacht nu met een eigen lus die berichten verwerkt en het spelvenster naar voren haalt.
+- **Foutmelding bij de knop Help.** De hulp-agent in het menu gebruikte DAO 3.5 (`DAO.CreateEngineFactory failed`), dat niet in Windows 10/11 zit. Het menu gebruikt nu DAO 3.6, dat Windows zelf meelevert.
+- **Helpteksten van de agent.** Een vraag in het ballonnetje opende een WinHelp-popup, en WinHelp bestaat niet meer (er opende alleen een webpagina van Microsoft). De patcher haalt de teksten uit `REDCAT.HLP` en het menu toont ze nu in een berichtvenster.
 
 ## [0.2.0] - 2026-10-17
 
