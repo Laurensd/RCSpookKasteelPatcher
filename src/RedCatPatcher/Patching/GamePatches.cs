@@ -75,9 +75,53 @@ public static class GamePatches
             "Achtergrondvenster van RedCat.exe heeft het RedCat-icoon in de taakbalk",
             [new(Hex("68 00 7f 00 00 56 89 44 24 30 ff d7 68 00 7f 00 00 56 89 44 24 2c ff d7"),
                  Hex("6a 65 90 90 90 56 89 44 24 30 ff d7 6a 65 90 90 90 56 89 44 24 2c ff d7"))]),
+
+        // De helpknop opent de hulp-agent, die zijn teksten uit Agent\RedCat.adb (een Jet 3.0-database) leest via
+        // DAO 3.5. Die is op Windows 10/11 niet geregistreerd: "DAO.CreateEngineFactory failed". Windows heeft
+        // zelf DAO 3.6 met Jet 4.0, dat Jet 3-databases opent. De interfaces zijn gelijk (zelfde IID's), alleen
+        // de CLSID's van DBEngine/PrivDBEngine, de licentiesleutel en de Jet-DLL verschillen.
+        new("menu-dao36", "RcHcMenu.dat",
+            "Helpknop: hulp-agent gebruikt DAO 3.6 (in Windows) in plaats van DAO 3.5",
+            [new(Hex("10 00 00 00 00 00 10 00 80 00 00 aa 00 6d 2e a4 11 00 00 00 00 00 10 00 80 00 00 aa 00 6d 2e a4"),
+                 Hex("00 01 00 00 00 00 10 00 80 00 00 aa 00 6d 2e a4 01 01 00 00 00 00 10 00 80 00 00 aa 00 6d 2e a4")),
+             new(Str32("mbmabptebkjcdlgtjmskjwtsdhjbmkmwtrak"), Str32("mjgcqcejfchcijecpdhckcdjqigdejfccjri")),
+             new(Encoding.ASCII.GetBytes("MSJET35.dll\0"), Encoding.ASCII.GetBytes("MSJET40.dll\0"))]),
+
+        // Een vraag in de ballon van de hulp-agent opent een WinHelp-popup uit Agent\RedCat.HLP. WinHelp bestaat niet
+        // meer (Windows opent alleen een webpagina). De patcher zet de teksten in Agent\RedCat.ini (AgentHelp), en
+        // de functie die de popup opende (0x54BEC0, eax = pad van het helpbestand, edx = contextnaam) wordt:
+        //   GetPrivateProfileStringA(naam, "Title", naam, titel, 256, pad)
+        //   GetPrivateProfileStringA(naam, "Text", "", tekst, 2048, pad); leeg: niets tonen
+        //   | in de tekst wordt een regeleinde; MessageBoxA(GetActiveWindow(), tekst, titel, MB_ICONINFORMATION)
+        // Het pad wijst naar Agent\RedCat.ini in plaats van .HLP (even lang).
+        new("menu-agent-help", "RcHcMenu.dat",
+            "Helpteksten van de hulp-agent in een berichtvenster (WinHelp bestaat niet meer)",
+            [new(Hex("""
+                    55 8b ec 83 c4 f4 33 c9 89 4d f4 89 55 f8 89 45 fc 8b 45 fc e8 0b 83 eb ff 8b 45 f8 e8 03 83 eb ff
+                    33 c0 55 68 7f bf 54 00 64 ff 30 64 89 20 8d 45 f4 8b 15 fc 23 57 00 8b 12 8b 52 40 e8 46 7f eb ff
+                    33 c0 55 68 5d bf 54 00 64 ff 30 64 89 20 a1 fc 23 57 00 8b 00 83 c0 40 8b 55 fc e8 e2 7e eb ff
+                    8b 45 f8 e8 4a fa ff ff 8b c8 a1 fc 23 57 00 8b 00 ba 08 00 00 00 e8 0f 59 f0 ff 33 c0 5a 59 59
+                    64 89 10 68 64 bf 54 00 a1 fc 23 57 00 8b 00 83 c0 40 8b 55 f4 e8 a8 7e eb ff c3 e9 92 78 eb ff
+                    eb e6 33 c0 5a 59 59 64 89 10 68 86 bf 54 00 8d 45 f4 ba 03 00 00 00 e8 56 7e eb ff c3 e9 70 78
+                    eb ff eb eb 8b e5 5d c3 8b c0
+                    """),
+                 Hex("""
+                    55 8b ec 81 ec 00 09 00 00 53 56 57 8b f0 8b fa 85 ff 74 6d 85 f6 74 69
+                    56 68 00 01 00 00 8d 85 00 f7 ff ff 50 57 68 48 bf 54 00 57 ff 15 68 53 57 00
+                    56 68 00 08 00 00 8d 9d 00 f8 ff ff 53 68 53 bf 54 00 68 4e bf 54 00 57 ff 15 68 53 57 00
+                    85 c0 74 2d 8a 03 84 c0 74 0a 3c 7c 75 03 c6 03 0a 43 eb f0
+                    6a 40 8d 85 00 f7 ff ff 50 8d 85 00 f8 ff ff 50 ff 15 48 57 57 00 50 ff 15 3c 56 57 00
+                    5f 5e 5b 8b e5 5d c3 54 69 74 6c 65 00 54 65 78 74 00 00
+                    cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+                    cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+                    """)),
+             new(Encoding.ASCII.GetBytes("Agent\\RedCat.HLP\0"), Encoding.ASCII.GetBytes("Agent\\RedCat.ini\0"))]),
     ];
 
-    private static byte[] Hex(string s) => Convert.FromHexString(s.Replace(" ", ""));
+    private static byte[] Hex(string s) => Convert.FromHexString(string.Concat(s.Where(char.IsAsciiHexDigit)));
+
+    // Delphi-stringconstante: lengte als 32-bit getal, gevolgd door de tekens.
+    private static byte[] Str32(string s) => [.. BitConverter.GetBytes(s.Length), .. Encoding.ASCII.GetBytes(s)];
 
     // Delphi binaire DFM: property-naam en strings zijn length-prefixed; 0x06 = vaString, 0x07 = vaIdent.
     private const byte VaString = 0x06, VaIdent = 0x07;

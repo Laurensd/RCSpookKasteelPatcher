@@ -35,7 +35,7 @@ Eenmalig of afhankelijk van de disc; er valt niets te kiezen dat een speler late
 | Disc-controle | `Disc/DiscVerifier.cs` | Niets (alleen hashes) | Heeft de disc nodig |
 | Officiële updates | `Updates/OfficialUpdate.cs` | `RcHcGame.dat`, 14 ini's in `settings`, 28 geluiden, help (Win98); alleen `RcHcGame.dat` (XP) | Heeft de update-exe's nodig; bepaalt de versie |
 | Versieherkenning | `Patching/GameVersion.cs` | Niets | Moet op de bestanden vóór de fixes |
-| Crash- en menufixes | `Patching/GamePatches.cs` | `RcHcGame.dat` (`font-glyph-metrics`), `RcHcMenu.dat` (`menu-32bit`, `dialog-center`, `menu-no-modeswitch`) | Zonder deze fixes werkt het spel niet; niemand wil ze uit |
+| Crash- en menufixes | `Patching/GamePatches.cs` | `RcHcGame.dat` (`font-glyph-metrics`), `RcHcMenu.dat` (`menu-32bit`, `dialog-center`, `menu-no-modeswitch`, `menu-dao36`, `menu-agent-help` + `Agent\RedCat.ini`) | Zonder deze fixes werkt het spel niet; niemand wil ze uit |
 | dgVoodoo2 installeren | `Patching/DgVoodoo.cs` (`Install`) | `DDraw.dll`, `D3DImm.dll`, `Glide*.dll`, `dgVoodooCpl.exe`, `dgVoodoo.conf` met de vaste sleutels (`VRAM`, watermerken, `CenterAppWindow`) | Download met hashcontrole; `--no-dgvoodoo` blijft een patcheroptie |
 | Logbestanden uit (standaard) | `Patching/DebugLogs.cs` | Zie groep 2, `--debug-logs` | De patcher zet de standaard; de launcher mag hem omzetten |
 | Snelkoppelingen, Steam | `Install/`, `Steam/` | `.lnk`/`.desktop`, `shortcuts.vdf`, `config.vdf` | Eenmalig, buiten de spelmap; Steam moet dicht zijn |
