@@ -11,6 +11,7 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 - Opnieuw patchen zonder opties voor breedbeeld, besturing, beeld of logs gebruikt de keuze uit `RedCatLauncher.ini`.
 
 ### Opgelost
+- Spel, het zwarte achtergrondvenster van `RedCat.exe` en de launcher hebben het RedCat-icoon in de taakbalk in plaats van een leeg standaardicoon.
 - Het spel komt na Start! in het menu op de voorgrond; je hoeft er niet meer met alt-tab naartoe. Dit ging vooral mis bij de eerste start na het patchen, als je tijdens het laden klikte (bijv. een dubbelklik op Start!) of een toets indrukte: `RedCat.exe` wachtte op het spel zonder berichten te verwerken, waardoor het zwarte venster "reageert niet" werd en de voorgrond vasthield. `RedCat.exe` wacht nu met een eigen lus die berichten verwerkt en het spelvenster naar voren haalt.
 
 ## [0.2.0] - 2026-10-17

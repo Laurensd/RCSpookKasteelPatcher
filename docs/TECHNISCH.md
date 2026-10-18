@@ -161,6 +161,23 @@ voren, en de hele ronde spel → menu → Stoppen → Ja sluit `RedCat.exe` netj
 spel: invoer binnen het tijdvenster, omdat het spelvenster hier binnen ~0,6 s verschijnt. De XP-build is niet getest;
 heeft die een andere vensterklasse, dan doet stap 3 niets en blijft alleen het hangen weg.
 
+## Fix 6 — icoon in de taakbalk (`RcHcGame.dat`, `RedCat.exe`)
+
+Spel en `RedCat.exe` hebben elk een eigen icoon (groepsicoon 107 in `RcHcGame.dat`, 101 in `RedCat.exe`), maar hun
+vensters gebruiken het niet. In de taakbalk staan dan twee lege standaardiconen: het zwarte venster van `RedCat.exe`
+(klasse `MOTOR`, `WS_EX_APPWINDOW`) en het spelvenster (klasse `RedCat`). Het menu (Delphi, `MAINICON`) had het al goed.
+
+- `RcHcGame.dat` registreert zijn klasse met `hIcon = LoadIconA(NULL, IDI_APPLICATION)`, het standaardicoon van Windows.
+  Fix (`game-icon`): `push 7F00h; push ebx` wordt `push 107; push edi; nop×3`. `edi` is daar `hInstance`, dezelfde
+  waarde die in `WNDCLASS.hInstance` gaat. De XP-build heeft dezelfde code op andere adressen (eigen patroon); 1.0.1 is
+  gelijk aan 1.0.0.
+- `RedCat.exe` vult `hIcon` en `hIconSm` van `WNDCLASSEX` met `LoadIconA(hInstance, 7F00h)`. Dat id bestaat niet in het
+  bestand, dus beide blijven `NULL`. Fix (`redcat-icon`): twee keer `push 7F00h` wordt `push 101; nop×3`.
+
+Getest op Windows 11 met 1.0.0: `GetClassLongPtr(GCL_HICON)` geeft voor beide vensters het RedCat-icoon. De launcher
+leest het icoon bij het openen uit `RedCat.exe` in de spelmap (`LoadImageW` + `WM_SETICON`), zodat het niet in deze
+repository staat.
+
 ## dgVoodoo2
 
 De Genesis3D-drivers gebruiken Glide 2 of DirectDraw/Direct3D 6. dgVoodoo2 vertaalt beide naar Direct3D 11/12.
