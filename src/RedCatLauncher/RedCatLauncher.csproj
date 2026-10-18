@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>RedCatLauncher</AssemblyName>
+    <RootNamespace>RedCatLauncher</RootNamespace>
+    <Version>0.2.0</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Single-file release build: dotnet publish -c Release -r win-x64. Een Windows-programma, ook onder Proton. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishTrimmed>true</PublishTrimmed>
+    <!-- Zonder ReadyToRun ~0,9 s opstarttijd, met ~0,4 s (zie docs/LAUNCHER.md, "Proef GUI-framework") -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+  </ItemGroup>
+
+  <!-- Dezelfde patchcode als de patcher -->
+  <ItemGroup>
+    <Compile Include="..\RedCatPatcher\Patching\*.cs" LinkBase="Patching" />
+    <Compile Include="..\RedCatPatcher\PatchException.cs" Link="PatchException.cs" />
+  </ItemGroup>
+
+  <!-- SkiaSharp en HarfBuzzSharp leveren 100 MB aan native .pdb's mee; die horen niet in de release -->
+  <Target Name="DropNativePdbs" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+</Project>

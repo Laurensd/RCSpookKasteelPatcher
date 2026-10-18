@@ -1,6 +1,6 @@
 # Ontwerp: launcher naast `RedCat.exe`
 
-Ontwerpnotitie, nog niets gebouwd. Afspraak (17-10-2026): de opties blijven voorlopig in de patcher; later komt er een
+Ontwerpnotitie; de stappen 1–5 uit "Aanbevolen volgorde" zijn gebouwd. Afspraak (17-10-2026): de opties blijven voorlopig in de patcher; later komt er een
 aparte launcher die de code uit `Patching/` hergebruikt. Deze notitie verdeelt de huidige opties over drie plekken en
 beschrijft wat er nodig is om een keuze op een geïnstalleerde map telkens opnieuw toe te passen en terug te draaien.
 
@@ -323,8 +323,11 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
    neemt opnieuw patchen de `[Keuze]` uit `RedCatLauncher.ini` over.
 4. ~~**Proef: GUI-framework onder Proton**~~ en op de Steam Deck (een leeg venster dat `RedCat.exe` start, single-file).
    Gedaan: Avalonia (zie "Proef GUI-framework").
-5. **Launcher, tabblad Spelen**: groep 2 (breedbeeld, besturing, controller, beeld, logs) via "opbouwen uit de basis",
-   plus de stand "direct spelen" zonder venster.
+5. ~~**Launcher, tabblad Spelen**~~ (gedaan, `src/RedCatLauncher`): groep 2 via `Basis.Apply`, één regel per optie,
+   te bedienen met controller (XInput-poll uit de proef, met herhaling bij ingedrukt houden). `--spelen` past toe en
+   start zonder venster; `--software` tekent zonder GPU. De patcher kopieert `RedCatLauncher.exe` naast zich mee naar
+   de spelmap. Nog met de hand te testen onder Proton en op de Deck (teststappen in de PR). Er is nog geen tabblad
+   Testen, dus ook nog geen tabbalk.
 6. **Snelkoppelingen en Steam naar de launcher**, met herkenning van de oude regel naar `RedCat.exe`.
 7. **Tabblad Testen**: startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch aan), logs opruimen, logmap
    openen.

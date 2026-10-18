@@ -5,6 +5,7 @@ using RedCatPatcher.Patching;
 using RedCatPatcher.Updates;
 
 const string GameFolderName = "RedCat Spookkasteel";
+const string LauncherExe = "RedCatLauncher.exe";
 
 Options options;
 try { options = Options.Parse(args); }
@@ -174,12 +175,23 @@ try
     // Keuzebestand voor de launcher: gewenst = toegepast
     new LauncherIni(choice, choice, basisSha256).Write(outDir);
 
+    // De launcher naast de patcher gaat mee naar de spelmap (naast RedCat.exe)
+    var launcher = Path.Combine(AppContext.BaseDirectory, LauncherExe);
+    bool hasLauncher = File.Exists(launcher);
+    if (hasLauncher && !Path.GetFullPath(launcher).Equals(Path.Combine(outDir, LauncherExe), StringComparison.OrdinalIgnoreCase))
+    {
+        File.Copy(launcher, Path.Combine(outDir, LauncherExe), overwrite: true);
+        Console.WriteLine();
+        Console.WriteLine($"  [ok] {LauncherExe} in de spelmap: kies daar breedbeeld, besturing en beeld, en start het spel");
+    }
+
     // 7. Snelkoppelingen en Steam (vraagt interactief j/N als er geen optie is opgegeven)
     Shortcuts.Run(outDir, options.Shortcuts, interactive, Ask);
 
     Console.WriteLine();
     Console.WriteLine("Klaar! Start het spel met:");
     Console.WriteLine($"  {Path.Combine(outDir, "RedCat.exe")}");
+    if (hasLauncher) Console.WriteLine($"  of, om eerst instellingen te kiezen: {Path.Combine(outDir, LauncherExe)}");
     if (!OperatingSystem.IsWindows() && options.Shortcuts.Steam != true)
         Console.WriteLine("  (Linux/Steam Deck: voeg RedCat.exe toe aan Steam met --steam, of zelf als niet-Steam-game met Proton.)");
     Pause(interactive);

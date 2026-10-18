@@ -6,6 +6,7 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 ## [Unreleased]
 
 ### Toegevoegd
+- `RedCatLauncher.exe` naast `RedCat.exe`: kies breedbeeld, besturing, controller-indeling, beeldopties en logbestanden zonder opnieuw te patchen, en start het spel. Werkt met muis, toetsenbord en controller (ook op de Steam Deck in de gamemodus), en met `--spelen` zonder venster. De patcher zet de launcher in de spelmap; de release-zip en -tar.gz bevatten hem.
 - De patcher bewaart een kopie van de spelbestanden vóór de fixes (`RedCatPatcher\basis` in de spelmap) en schrijft de gekozen opties naar `RedCatLauncher.ini`. Daarmee kan de launcher later een andere keuze toepassen en terugdraaien zonder de disc.
 - Opnieuw patchen zonder opties voor breedbeeld, besturing, beeld of logs gebruikt de keuze uit `RedCatLauncher.ini`.
 
