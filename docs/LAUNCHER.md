@@ -170,6 +170,7 @@ de bestanden die de launcher aanpast, bijvoorbeeld in `RedCatPatcher\basis\`:
 | `RcHcGame.dat` | Fixes, logs, breedbeeld, joysticktabel |
 | `RcHcMenu.dat` | Fixes, logs |
 | `GlideDrv.dll` | Logs, breedbeeld |
+| `RedCat.exe` | Fix (spel naar de voorgrond) |
 | `AdamWin.ini`, `settings\static.ini`, `settings\PlayerDef.ini`, `settings\HUDIcon.ini` | Originele waarden voor FOV, toetsen en iconposities |
 
 Bij "Spelen" vergelijkt de launcher de gewenste keuze met de toegepaste keuze (beide in het keuzebestand). Verschillen
@@ -177,7 +178,7 @@ ze, dan:
 
 1. `GameVersion.Detect` op de basis: dat zijn precies de bekende bestanden, dus de versie en `ExeBuild` volgen vanzelf
    en een gewijzigde of beschadigde basis valt op.
-2. De drie binaire bestanden in het geheugen opnieuw opbouwen: basis → `GamePatches.All` → `DebugLogs` (tenzij aan) →
+2. De binaire bestanden in het geheugen opnieuw opbouwen: basis → `GamePatches.All` → `DebugLogs` (tenzij aan) →
    breedbeeld → joysticktabel. Dit is dezelfde code als nu, alleen op een kopie; elke patch draait altijd orig → nieuw.
 3. Wegschrijven naar een tijdelijk bestand en dan vervangen, zodat een onderbreking geen half gepatcht spel achterlaat.
 4. De INI-sleutels die de launcher beheert, zetten op de waarde uit de basis of de optie. Alleen die sleutels: wat de
