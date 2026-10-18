@@ -201,13 +201,27 @@ sealed class MainWindow : Window
                 // Een [Debug]-schakelaar zet de logs toch aan (TestOptions.Effective)
                 _ => [(testing.Debug.Count > 0 ? "On (Testing tab)" : "Off", false), ("On", true)],
                 x => x.DebugLogs, (x, v) => x with { DebugLogs = v }));
-        AddCategory("Testing", "For testing: start a level directly, extra debug messages and the log files.", null,
+        AddCategory("Testing", "For testing: start a level directly, the console and cheats, extra debug messages and the log files.", null,
             [
                 Test("Start level",
                     "Play starts this level directly, without the menu, as test player 10: your own players and their " +
                     "progress are left alone. Off: Play starts the game with the menu, as usual.",
                     StartLevel.Levels.Select((l, i) => ($"{i + 1} · {l.Name}", (int?)(i + 1))).Prepend(("Off", null)),
                     t => t.StartLevel, (t, v) => t with { StartLevel = v }),
+                // De volgende drie gelden alleen bij een startlevel (TestOptions.Apply, StartLevel.Prepare)
+                Test("Console and cheats",
+                    "With a start level: the ` key (left of 1) opens the game's console. Type \"cheats on\" and press Enter, " +
+                    "then Esc: the menu has \"Cheats...\" (next level, fly through walls, god mode). Only for test player 10.",
+                    t => OnOff(t, defaultOn: true), t => t.Console, (t, v) => t with { Console = v }),
+                Test("Debug keys",
+                    "With a start level: the engine's debug keys, such as F9 god mode, F6 walk through walls and F5 frame rate, " +
+                    "and \"Cheats...\" in the Esc menu right away. Clashes with WASD (A and S) and the modern controller (LB/RB " +
+                    "are F5/F6). Turned off again when you play without a start level.",
+                    t => OnOff(t, defaultOn: false), t => t.SecretCommands, (t, v) => t with { SecretCommands = v }),
+                Test("Load log on screen",
+                    "With a start level: shows the game's log on screen while it loads, until the level begins. Turned off " +
+                    "again when you play without a start level.",
+                    t => OnOff(t, defaultOn: false), t => t.LoadConsole, (t, v) => t with { LoadConsole = v }),
                 .. DebugSwitches.Select(d => Test(d.Label, d.Help + " Turns on the debug logs too.",
                     [("Off", false), ("On", true)],
                     t => t.Debug.Contains(d.Key), (t, v) => t.WithDebug(d.Key, v))),
@@ -227,9 +241,8 @@ sealed class MainWindow : Window
     }
 
     /// <summary>
-    /// De [Debug]-schakelaars van AdamWin.ini op het tabblad Testing, in de volgorde van <see cref="TestOptions.DebugKeys"/>.
-    /// Een nieuwe schakelaar (bijv. uit het onderzoek naar DebugSecretCommands, DebugKeys en DebugUseConsole) komt daar
-    /// en hier.
+    /// De log-schakelaars van AdamWin.ini [Debug] op het tabblad Testing, in de volgorde van <see cref="TestOptions.DebugKeys"/>.
+    /// Een nieuwe log-schakelaar komt daar en hier; debugtoetsen en laadlog staan apart (alleen bij een startlevel).
     /// </summary>
     static readonly (string Key, string Label, string Help)[] DebugSwitches =
     [
@@ -239,6 +252,14 @@ sealed class MainWindow : Window
     ];
 
     static string LevelName(int level) => $"{level} ({StartLevel.Levels[level - 1].Name})";
+
+    /// <summary>Uit en aan voor een schakelaar die alleen bij een startlevel telt; zonder startlevel staat dat erbij.</summary>
+    static IEnumerable<(string Text, bool Value)> OnOff(TestOptions t, bool defaultOn)
+    {
+        string suffix = t.StartLevel == null ? " (needs start level)" : "";
+        var items = new[] { ("Off", false), ("On" + suffix, true) };
+        return defaultOn ? items.Reverse() : items;
+    }
 
     OptionRow Option<T>(string label, string help, IEnumerable<(string Text, T Value)> items, Func<Choice, T> get, Func<Choice, T, Choice> set)
     {
@@ -254,8 +275,11 @@ sealed class MainWindow : Window
     OptionRow Test<T>(string label, string help, IEnumerable<(string Text, T Value)> items, Func<TestOptions, T> get, Func<TestOptions, T, TestOptions> set)
     {
         var list = items.ToList();
-        return OptionRow.Create(label, help, _ => list, get, set, () => testing, t => testing = t);
+        return Test(label, help, _ => list, get, set);
     }
+
+    OptionRow Test<T>(string label, string help, Func<TestOptions, IEnumerable<(string Text, T Value)>> items, Func<TestOptions, T> get, Func<TestOptions, T, TestOptions> set) =>
+        OptionRow.Create(label, help, items, get, set, () => testing, t => testing = t);
 
     void AddCategory(string name, string description, Control? extra, params OptionRow[] rows)
     {
@@ -455,6 +479,10 @@ sealed class MainWindow : Window
             game.NeedsFixUpdate ? "A game fix is installed when you press Play."
                 : game.NeedsApply ? "Changed: applied when you press Play." : null,
             testing.StartLevel is { } level ? $"Play starts level {LevelName(level)} directly (Testing tab)." : null,
+            testing.KeysClashWith(choice)
+                ? "Watch out: the debug keys clash with " + (choice.Wasd && choice.Controller ? "WASD and the modern controller"
+                    : choice.Wasd ? "WASD (A shows AI info, S speeds up the game)" : "the modern controller (LB/RB are F5/F6)") + "."
+                : null,
         }.OfType<string>()));
 
     async void Play()

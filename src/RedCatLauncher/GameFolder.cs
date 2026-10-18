@@ -44,7 +44,8 @@ sealed class GameFolder(string dir)
 
     /// <summary>
     /// Bouwt de spelbestanden opnieuw op uit de basis als de keuze verschilt van [Toegepast], en zet de
-    /// [Debug]-schakelaars in AdamWin.ini (dat schrijft alleen wat anders is).
+    /// [Debug]-schakelaars in AdamWin.ini (dat schrijft alleen wat anders is; zonder startlevel gaan de debugtoetsen
+    /// en het laadlog uit).
     /// </summary>
     public void ApplyIfNeeded()
     {
@@ -75,7 +76,7 @@ sealed class GameFolder(string dir)
         if (!HasGame) throw new PatchException($"{GameExe} not found in {dir}. Put the launcher in the game folder, next to {GameExe}.");
         if (CanChoose && Testing.StartLevel is { } level)
         {
-            StartLevel.Prepare(dir, level);
+            StartLevel.Prepare(dir, level, Testing.Console);
             Started = StartLevel.Launch(dir);
             startedLevel = true;
             Log($"Started level {level} ({StartLevel.Levels[level - 1].Name}) directly");

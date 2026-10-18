@@ -13,6 +13,29 @@ public static class IniFile
     public static void Set(string path, string section, string key, string value) =>
         Update(path, s => s.Equals(section, StringComparison.OrdinalIgnoreCase), key, _ => value, firstSectionOnly: true);
 
+    /// <summary>
+    /// Zoals <see cref="Set"/>, maar een ontbrekende sleutel komt direct onder de kop van de sectie, en een ontbrekende
+    /// sectie aan het eind van het bestand. Voor sleutels die het spel leest maar niet in zijn bestanden heeft.
+    /// </summary>
+    public static void SetOrAdd(string path, string section, string key, string value)
+    {
+        if (ReadAll(path).GetValueOrDefault(section)?.ContainsKey(key) == true)
+        {
+            Set(path, section, key, value);
+            return;
+        }
+        if (!File.Exists(path))
+            throw new PatchException($"{Path.GetFileName(path)} niet gevonden in de spelmap.");
+
+        var text = File.ReadAllText(path, Encoding.Latin1);
+        var newline = text.Contains("\r\n") || !text.Contains('\n') ? "\r\n" : "\n";
+        var header = Regex.Match(text, $@"^[ \t]*\[{Regex.Escape(section)}\][^\r\n]*(\r?\n)?", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        text = header.Success
+            ? text.Insert(header.Index + header.Length, (header.Groups[1].Success ? "" : newline) + $"{key}={value}{newline}")
+            : text + (text.Length == 0 || text.EndsWith('\n') ? "" : newline) + $"[{section}]{newline}{key}={value}{newline}";
+        File.WriteAllText(path, text, Encoding.Latin1);
+    }
+
     /// <summary>De waarde van <paramref name="key"/> in de eerste sectie met de naam <paramref name="section"/>.</summary>
     public static string Get(string path, string section, string key)
     {

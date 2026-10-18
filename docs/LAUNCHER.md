@@ -172,15 +172,22 @@ In de launcher (`src/RedCatLauncher`, Engelstalig zoals de andere tabbladen), me
 | Regel | Wat |
 |---|---|
 | Start level | Off of 1 t/m 5. Play doet dan hetzelfde als `--start-level`: `StartLevel.Prepare` en `RcHcGame.dat -game`, zonder menu (dus ook zonder de controller-als-muis). Ook `--spelen` volgt dit. |
+| Console and cheats | Standaard aan; telt alleen met een startlevel. `StartLevel.Prepare(…, console: true)` zet `Console=1` in `[General]` van de verse `Player10.ini` (`IniFile.SetOrAdd`, want `PlayerDef.ini` heeft die sleutel niet). Uitleg: `` ` `` opent de console, `cheats on`, dan Esc → "Cheats...". Raakt alleen testspeler 10. |
+| Debug keys | Standaard uit. `DebugSecretCommands=1` in `AdamWin.ini [Debug]`, alleen bij een start met startlevel; Play zonder startlevel zet hem terug naar de basis (`0`). Geeft ook direct het cheatmenu. Staat WASD of de moderne controller aan, dan waarschuwt de statusregel (`TestOptions.KeysClashWith`: A, S, F5, F6). |
+| Load log on screen | Standaard uit. `DebugUseConsole=1`, met dezelfde regel als Debug keys. |
 | Log graphics driver, Log loading, Log player position | `DebugDriver`, `DebugLoading`, `DebugPlayerPosition` in `AdamWin.ini [Debug]`. Zodra er een aan staat, gaan de logs ook aan (`TestOptions.Effective`); de regel Debug logs onder Advanced toont dan "On (Testing tab)". |
 | Clean up logs | `DebugLogs.Clean`, met het aantal verwijderde bestanden in de statusregel |
 | Open log folder | De spelmap in de bestandsbeheerder: `explorer.exe` op Windows; onder Proton/Wine `winebrowser` met een `file://`-adres, dat het aan `xdg-open` geeft (Linux-bestandsbeheerder); native op Linux `xdg-open` |
 
-Bewaard in `RedCatLauncher.ini [Testen]` (zie "Waar de launcher zijn keuze bewaart"). Bij Play zet `TestOptions.Apply`
-alleen de schakelaars uit `TestOptions.DebugKeys`: `1` als ze aan staan, anders de waarde uit de basis; wat er anders
-in `AdamWin.ini` staat (ook andere `[Debug]`-sleutels), blijft staan. Dat is herhaalbaar vanaf elke vorige stand
-(`TestOptionsTests`, `BasisTests.Apply_WithTestOptions_FromAnyPrevious_EqualsFreshInstall`). Een nieuwe schakelaar
-(uit stap 8) komt in `TestOptions.DebugKeys` en in `DebugSwitches` van `MainWindow` (label en uitleg).
+Bewaard in `RedCatLauncher.ini [Testen]` (zie "Waar de launcher zijn keuze bewaart"; `Console` ontbreekt in een
+bestand van vóór die schakelaar en staat dan aan). Bij Play zet `TestOptions.Apply` alleen de schakelaars uit
+`TestOptions.DebugKeys` plus `DebugSecretCommands` en `DebugUseConsole` (die twee alleen met een startlevel): `1` als
+ze aan staan, anders de waarde uit de basis; wat er anders in `AdamWin.ini` staat (ook andere `[Debug]`-sleutels),
+blijft staan. Een met de hand aangezette `DebugSecretCommands` gaat bij Play zonder startlevel dus ook uit. Dat is
+herhaalbaar vanaf elke vorige stand (`TestOptionsTests`, `BasisTests.Apply_WithTestOptions_FromAnyPrevious_EqualsFreshInstall`).
+Een nieuwe log-schakelaar komt in `TestOptions.DebugKeys` en in `DebugSwitches` van `MainWindow` (label en uitleg).
+Geen schakelaar voor `DebugKeys` (alleen ruis) en `DebugFake*` (crashes). De patcher zelf (`--start-level`) zet de
+console niet aan; dat doet alleen de launcher.
 
 ## Herhaalbaar toepassen en terugdraaien
 
@@ -257,7 +264,7 @@ BasisSha256=...  ; ter controle van RedCatPatcher\basis
   bestand, en er is één installatie per map. Een tweede installatie heeft zijn eigen keuze.
 - **`BackupUserData`** neemt het bestand mee bij opnieuw patchen, net als `menu.ini`: dezelfde keuze komt terug.
 - Testinstellingen (`[Debug]`-schakelaars, startlevel) staan niet in `[Keuze]` maar in een eigen sectie `[Testen]`
-  (`StartLevel=0..5`, `DebugDriver=0/1`, ...), die alleen de launcher schrijft en alleen als er iets aan staat. De
+  (`StartLevel=0..5`, `Console=0/1`, `DebugDriver=0/1`, ...), die alleen de launcher schrijft en alleen als er iets aan staat. De
   patcher schrijft het bestand zonder `[Testen]`, dus opnieuw patchen zet de testhulp terug, net als `AdamWin.ini`.
 
 ## Proton en Steam
@@ -380,7 +387,7 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 7. ~~**Tabblad Testen**~~ (gedaan, tabblad Testing): startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch
    aan), logs opruimen, logmap openen. Zie "Tabblad Testing" onder groep 3.
 8. ~~**Onderzoek** naar `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole`~~ (gedaan, zie
-   "`AdamWin.ini [Debug]`" en `TECHNISCH.md`). Schakelaars voor het tabblad Testing (nog te bouwen):
+   "`AdamWin.ini [Debug]`" en `TECHNISCH.md`). Schakelaars voor het tabblad Testing (gebouwd, zie "Tabblad Testing"):
    - **Console en cheats** (standaard aan bij een testlevel): `Console=1` in `[General]` van `Player10.ini`, na de kopie
      uit `PlayerDef.ini` in `StartLevel`. Raakt alleen testspeler 10, dus niet het gewone spelen en geen toetsbotsingen.
      Uitleg in de launcher: `` ` `` opent de console, `cheats on` en dan Esc → "Cheats...".

@@ -15,17 +15,27 @@ public sealed class TestOptionsTests : IDisposable
     private const string AdamWin =
         "[Camera-PlayerCamera]\r\nFieldOfView=1.360000\r\n" +
         "[Debug]\r\nDebugActorLighting=0\r\nDebugDriver=0\r\nDebugFakeDriverCrash=0\r\nDebugFileNumber=3\r\n" +
-        "DebugLoading=0\r\nDebugPlayerPosition=0\r\nDebugUseConsole=0\r\n" +
+        "DebugLoading=0\r\nDebugPlayerPosition=0\r\nDebugSecretCommands=0\r\nDebugUseConsole=0\r\n" +
         "[Sound]\r\nDebugDriver=0\r\n";
 
-    /// <summary>Alle 48 combinaties: geen startlevel of 1 t/m 5, met elke deelverzameling van de schakelaars.</summary>
+    /// <summary>
+    /// Alle 384 combinaties: geen startlevel of 1 t/m 5, met elke deelverzameling van de log-schakelaars, console,
+    /// debugtoetsen en laadlog.
+    /// </summary>
     private static IEnumerable<TestOptions> AllOptions()
     {
+        int n = TestOptions.DebugKeys.Length;
         foreach (var level in new int?[] { null, 1, 2, 3, 4, 5 })
-            for (int mask = 0; mask < 1 << TestOptions.DebugKeys.Length; mask++)
+            for (int mask = 0; mask < 1 << n + 3; mask++)
             {
-                var options = new TestOptions { StartLevel = level };
-                for (int k = 0; k < TestOptions.DebugKeys.Length; k++)
+                var options = new TestOptions
+                {
+                    StartLevel = level,
+                    Console = (mask & 1 << n) == 0,
+                    SecretCommands = (mask & 1 << n + 1) != 0,
+                    LoadConsole = (mask & 1 << n + 2) != 0,
+                };
+                for (int k = 0; k < n; k++)
                     options = options.WithDebug(TestOptions.DebugKeys[k], (mask & 1 << k) != 0);
                 yield return options;
             }
@@ -66,12 +76,18 @@ public sealed class TestOptionsTests : IDisposable
 
         new LauncherIni(new Choice(), new Choice(), "ABC123") { Testing = new TestOptions { StartLevel = 3 }.WithDebug("DebugLoading", true) }.Write(game);
         var text = File.ReadAllText(path);
-        Assert.Contains("[Testen]\r\nStartLevel=3\r\nDebugDriver=0\r\nDebugLoading=1\r\nDebugPlayerPosition=0\r\n", text);
+        Assert.Contains("[Testen]\r\nStartLevel=3\r\nConsole=1\r\nDebugDriver=0\r\nDebugLoading=1\r\nDebugPlayerPosition=0\r\n" +
+            "DebugSecretCommands=0\r\nDebugUseConsole=0\r\n", text);
         Assert.EndsWith("BasisSha256=ABC123\r\nRevision=2\r\n", text);
 
         // De patcher schrijft het bestand opnieuw zonder [Testen]: opnieuw patchen zet de testhulp terug.
         new LauncherIni(new Choice(), new Choice(), "ABC123").Write(game);
         Assert.Equal(new TestOptions(), LauncherIni.Read(game)!.Testing);
+
+        // De console staat standaard aan: uit is wel iets om te bewaren
+        new LauncherIni(new Choice(), new Choice(), "ABC123") { Testing = new TestOptions { Console = false } }.Write(game);
+        Assert.Contains("Console=0\r\n", File.ReadAllText(path));
+        Assert.Equal(new TestOptions { Console = false }, LauncherIni.Read(game)!.Testing);
     }
 
     [Fact]
@@ -82,8 +98,13 @@ public sealed class TestOptionsTests : IDisposable
             "[Keuze]\r\nWasd=1\r\n[testen]\r\nStartLevel=9\r\ndebugdriver = 1\r\nDebugLoading=ja\r\nDebugFakeDriverCrash=1\r\n");
         Assert.Equal(new TestOptions().WithDebug("DebugDriver", true), LauncherIni.Read(game)!.Testing);
 
+        // Zonder Console (bestand van vóór die schakelaar): aan
         File.WriteAllText(Path.Combine(game, LauncherIni.FileName), "[Testen]\r\nStartLevel=5\r\n");
         Assert.Equal(new TestOptions { StartLevel = 5 }, LauncherIni.Read(game)!.Testing);
+
+        File.WriteAllText(Path.Combine(game, LauncherIni.FileName),
+            "[Testen]\r\nConsole=false\r\nDebugSecretCommands=1\r\nDebugUseConsole=true\r\nDebugKeys=1\r\n");
+        Assert.Equal(new TestOptions { Console = false, SecretCommands = true, LoadConsole = true }, LauncherIni.Read(game)!.Testing);
     }
 
     [Fact]
@@ -102,6 +123,44 @@ public sealed class TestOptionsTests : IDisposable
         Assert.Equal(choice with { DebugLogs = true }, new TestOptions().WithDebug("DebugDriver", true).Effective(choice));
         var logs = choice with { DebugLogs = true };
         Assert.Same(logs, new TestOptions().WithDebug("DebugLoading", true).Effective(logs));
+
+        // De console hangt aan de log van de engine, niet aan de logbestanden
+        Assert.Same(choice, new TestOptions { StartLevel = 1, SecretCommands = true, LoadConsole = true }.Effective(choice));
+    }
+
+    [Fact]
+    public void KeysClashWith_WasdOrModernController_OnlyWhenTheKeysAreReallyOn()
+    {
+        var keys = new TestOptions { StartLevel = 2, SecretCommands = true };
+        Assert.True(keys.KeysClashWith(new Choice { Wasd = true }));
+        Assert.True(keys.KeysClashWith(new Choice { Controller = true }));
+        Assert.False(keys.KeysClashWith(new Choice()));
+        Assert.False((keys with { StartLevel = null }).KeysClashWith(new Choice { Wasd = true }));
+        Assert.False((keys with { SecretCommands = false }).KeysClashWith(new Choice { Wasd = true, Controller = true }));
+    }
+
+    /// <summary>
+    /// AdamWin.ini geldt ook voor gewoon spelen: debugtoetsen en laadlog staan alleen aan bij een teststart, en Play
+    /// zonder startlevel zet ze terug, ook als ze met de hand aangezet waren.
+    /// </summary>
+    [Fact]
+    public void Apply_DebugKeysAndLoadLog_OnlyForATestStart()
+    {
+        var game = MakeGame();
+        var path = Path.Combine(game, TestOptions.AdamWin);
+        var test = new TestOptions { StartLevel = 3, SecretCommands = true, LoadConsole = true };
+
+        test.Apply(game);
+        Assert.Equal("1", IniFile.Get(path, "Debug", TestOptions.SecretCommandsKey));
+        Assert.Equal("1", IniFile.Get(path, "Debug", TestOptions.UseConsoleKey));
+
+        // Zelfde schakelaars, maar Play zonder startlevel
+        (test with { StartLevel = null }).Apply(game);
+        Assert.Equal(AdamWin, Read(game));
+
+        IniFile.Set(path, "Debug", TestOptions.SecretCommandsKey, "1");
+        new TestOptions().Apply(game);
+        Assert.Equal(AdamWin, Read(game));
     }
 
     [Fact]
@@ -134,9 +193,9 @@ public sealed class TestOptionsTests : IDisposable
         var path = Path.Combine(game, TestOptions.AdamWin);
         IniFile.Set(path, "Debug", "DebugFakeDriverCrash", "1");   // met de hand gezet: blijft staan
 
-        var on = TestOptions.DebugKeys.Aggregate(new TestOptions(), (o, k) => o.WithDebug(k, true));
+        var on = TestOptions.DebugKeys.Aggregate(new TestOptions { StartLevel = 1, SecretCommands = true, LoadConsole = true }, (o, k) => o.WithDebug(k, true));
         on.Apply(game);
-        Assert.All(TestOptions.DebugKeys, k => Assert.Equal("1", IniFile.Get(path, "Debug", k)));
+        Assert.All([.. TestOptions.DebugKeys, TestOptions.SecretCommandsKey, TestOptions.UseConsoleKey], k => Assert.Equal("1", IniFile.Get(path, "Debug", k)));
         Assert.Equal("1", IniFile.Get(path, "Debug", "DebugFakeDriverCrash"));
         Assert.Equal("3", IniFile.Get(path, "Debug", "DebugFileNumber"));
         Assert.Equal("0", IniFile.Get(path, "Sound", "DebugDriver"));
@@ -169,6 +228,7 @@ public sealed class TestOptionsTests : IDisposable
         new TestOptions().WithDebug("DebugDriver", true).Apply(game);
         Assert.Equal("[Debug]\r\nDebugDriver=1\r\n", Read(game));
         Assert.Throws<PatchException>(() => new TestOptions().WithDebug("DebugLoading", true).Apply(game));
+        Assert.Throws<PatchException>(() => new TestOptions { StartLevel = 1, SecretCommands = true }.Apply(game));
         Assert.Equal("[Debug]\r\nDebugDriver=1\r\n", Read(game));   // ook DebugDriver niet teruggezet
 
         File.Delete(Path.Combine(game, TestOptions.AdamWin));

@@ -172,6 +172,30 @@ public class OptionsPatchesTests
     }
 
     [Fact]
+    public void IniFile_SetOrAdd_AddsMissingKeyOrSection()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "[General]\r\nA=1\r\n[general]\r\nB=2\r\n");
+            IniFile.SetOrAdd(path, "General", "A", "x");          // bestaat: gewoon zetten
+            IniFile.SetOrAdd(path, "GENERAL", "Console", "1");    // ontbreekt: onder de eerste kop
+            IniFile.SetOrAdd(path, "Console", "Console", "1");    // en een ontbrekende sectie aan het eind
+            IniFile.SetOrAdd(path, "General", "Console", "1");    // nog een keer: verandert niets
+            Assert.Equal("[General]\r\nConsole=1\r\nA=x\r\n[general]\r\nB=2\r\n[Console]\r\nConsole=1\r\n", File.ReadAllText(path));
+
+            File.WriteAllText(path, "[Other]\nB=2");
+            IniFile.SetOrAdd(path, "General", "Console", "1");
+            IniFile.SetOrAdd(path, "Other", "C", "3");
+            Assert.Equal("[Other]\nC=3\nB=2\n[General]\nConsole=1\n", File.ReadAllText(path));
+
+            File.Delete(path);
+            Assert.Throws<PatchException>(() => IniFile.SetOrAdd(path, "General", "Console", "1"));
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void StartLevel_WritesRunSectionAndFreshTestPlayer()
     {
         var dir = Directory.CreateTempSubdirectory("redcat-test-").FullName;
@@ -190,6 +214,16 @@ public class OptionsPatchesTests
                 File.ReadAllText(Path.Combine(settings, "Game.ini")));
             Assert.Equal("[Player]\r\nLife=3\r\n", File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
             Assert.Throws<PatchException>(() => StartLevel.Prepare(dir, 6));
+
+            // Met de console: Console=1 in [General] van de verse kopie (PlayerDef.ini zelf blijft zoals hij is)
+            File.WriteAllText(Path.Combine(settings, "PlayerDef.ini"), "[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n");
+            StartLevel.Prepare(dir, 1, console: true);
+            Assert.Equal("[General]\nConsole=1\nDifficultyLevel=1\n\n[Player]\nLife=3\n",
+                File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
+            Assert.Equal("[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n", File.ReadAllText(Path.Combine(settings, "PlayerDef.ini")));
+            StartLevel.Prepare(dir, 1);
+            Assert.Equal("[General]\nDifficultyLevel=1\n\n[Player]\nLife=3\n",
+                File.ReadAllText(Path.Combine(settings, $"Player{StartLevel.TestPlayer}.ini")));
         }
         finally { Directory.Delete(dir, true); }
     }
