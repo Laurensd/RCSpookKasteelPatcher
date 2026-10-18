@@ -632,6 +632,30 @@ speler 10, kopieert `PlayerDef.ini` naar `Player10.ini` en start het spel. Het m
 met "Start level" op het tabblad Testing. Voortgang per speler staat in
 `Player%d.ini` (`[Level1] CurrentSubLevel`, `[SubLevel1_N] Completed`).
 
+### Vaardigheden
+
+Schieten is een vaardigheid, geen kwestie van toverflesjes. Bij het begin van elk sublevel
+(`RcPlayerProperties.cpp`, `0x439D50` in 1.0.0) leest het spel `[Player]` uit `Player%d.ini` en zet daarna de
+toverflesjes en de score op 0: de teller in de HUD (`0 / 50`) is wat je in dít level vindt, en `MagicPotion` of
+`InitialPotions` aanpassen helpt dus niet. De vaardigheden (`+0x68`) komen uit `[Player] Skill`, een bitmasker:
+1 schieten, 2 power shot, 4 superjump, 8 super shot (dezelfde volgorde als F10 met de debugtoetsen). Alleen bij
+`[General] GameType=1` (Snelspel) vervangt het spel die door `StandardSkill` van het sublevel uit `Game.ini`
+(`0x43A959`–`0x43A9DB`); bij `GameType=0` (Avontuur) blijft de waarde staan die je in de levels hebt verdiend
+(scriptcommando `RcEnableSkill`).
+
+| Nr | Griezelplek | `StandardSkill` |
+|---|---|---|
+| 1 | Het Bos | 0 |
+| 2 | Het Kasteel | 1 (schieten) |
+| 3 | Het Kerkhof | 3 |
+| 4 | De Grotten | 7 |
+| 5 | De Toren | 15 |
+
+`PlayerDef.ini` heeft `Skill=0` en `GameType=0`, dus testspeler 10 kon vanaf level 2 niet schieten. `StartLevel` zet
+daarom `[Player] Skill` van `Player10.ini` op de `StandardSkill` van de gekozen Griezelplek (uit `Game.ini`, met de
+tabel hierboven als reserve), zoals Snelspel die geeft. Getest in De Grotten: met `Skill=0` schiet Ctrl niets, met
+`Skill=7` wel. Gewone spelers en `PlayerDef.ini` blijven ongemoeid.
+
 Bekende crash: het opblazen van de muur in level 4 (De Grotten). De XP-update lost die op volgens de
 [uploader op het Internet Archive](https://archive.org/details/redcatspookkasteelupdate); niet getest of 1.0.0/1.0.1 onder
 moderne Windows nog crasht.

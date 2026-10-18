@@ -25,10 +25,19 @@ public static class StartLevel
     public const int TestPlayer = 10;
 
     /// <summary>
+    /// Vaardigheden (bitmasker: 1 schieten, 2 power shot, 4 superjump, 8 super shot) aan het begin van elke Griezelplek,
+    /// zoals <c>StandardSkill</c> in Game.ini [sublevel1_N]. Alleen als Game.ini ze niet heeft.
+    /// </summary>
+    public static readonly int[] StandardSkills = [0, 1, 3, 7, 15];
+
+    /// <summary>
     /// Het menu geeft zijn keuze door via Game.ini [Run] en start dan "RcHcGame.dat -game". Dit doet hetzelfde,
     /// met een verse kopie van PlayerDef.ini (volle gezondheid, 3 levens, standaardtoetsen). Met <paramref name="console"/>
     /// krijgt testspeler 10 ook de console (<c>[General] Console=1</c>, zie docs/TECHNISCH.md, "De console"): de
     /// <c>`</c>-toets opent hem, en <c>cheats on</c> geeft het cheatmenu in het Esc-menu.
+    /// In een Avontuur (<c>GameType=0</c>) neemt het spel de vaardigheden uit <c>[Player] Skill</c>, die je in de levels
+    /// verdient; PlayerDef.ini heeft 0, en zonder vaardigheid 1 kan RedCat niet schieten. Daarom krijgt testspeler 10
+    /// de <c>StandardSkill</c> van de gekozen Griezelplek, zoals Snelspel die geeft (docs/TECHNISCH.md, "Vaardigheden").
     /// </summary>
     public static void Prepare(string gameDir, int level, bool console = false)
     {
@@ -43,6 +52,10 @@ public static class StartLevel
         if (console) IniFile.SetOrAdd(player, "General", "Console", "1");
 
         var game = Path.Combine(settings, "Game.ini");
+        var skill = IniFile.ReadAll(game).GetValueOrDefault($"sublevel1_{level}")?.GetValueOrDefault("StandardSkill");
+        if (!int.TryParse(skill, out _)) skill = StandardSkills[level - 1].ToString();
+        IniFile.SetOrAdd(player, "Player", "Skill", skill!);
+
         IniFile.Set(game, "Run", "PlayerNumber", TestPlayer.ToString());
         IniFile.Set(game, "Run", "StartLevelNumber", "1");
         IniFile.Set(game, "Run", "StartSubLevelNumber", level.ToString());
