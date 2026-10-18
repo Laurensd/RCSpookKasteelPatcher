@@ -24,7 +24,7 @@ Opties (opdrachtregel):
 
 ```
 RedCatPatcher [disc.cue|disc.bin|disc.iso] [--out <map>] [--update <exe>] [--dgvoodoo-zip <zip>] [--no-dgvoodoo]
-              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--display <modus>]
+              [--widescreen [16:9|16:10]] [--wasd] [--controller] [--resolution <waarde>] [--render-scale <1-4>] [--display <modus>]
               [--fps-limit <n>] [--no-vsync] [--msaa <off|2x|4x|8x|16x>] [--crt] [--debug-logs]
               [--shortcut|--no-shortcut] [--steam|--no-steam] [--steam-dir <map>] [--proton <naam>] [--yes]
 RedCatPatcher --start-level <1-5> [--out <map>]
@@ -60,9 +60,9 @@ vier categorieën (de launcher is Engelstalig):
 
 | Categorie | Instellingen |
 |---|---|
-| Display | Beeldverhouding (4:3, 16:9, 16:10), weergave (randloos, volledig scherm, venster), renderresolutie |
-| Graphics | Anti-aliasing, V-Sync, fps-limiet, CRT-effect |
-| Controls | Bewegingstoetsen (pijltjes of WASD), controller-indeling (Classic of Modern) |
+| Display | Beeldverhouding (4:3, 16:9, 16:10), weergave (randloos, volledig scherm, venster), resolutie (Native, vaste resoluties die op het scherm passen, of Original; in een venster de venstergrootte) |
+| Graphics | Anti-aliasing (MSAA), render scale (supersampling 2–4x), V-Sync, fps-limiet, CRT-effect |
+| Controls | Toetsenbord en controller elk Modern of Classic, met een overzicht van alle toetsen en knoppen |
 | Advanced | Logbestanden |
 
 **Play** past een gewijzigde keuze toe en start het spel. Te bedienen met muis, toetsenbord of controller (d-pad of
@@ -89,6 +89,7 @@ Deze zijn standaard uit (behalve de renderresolutie, vsync en 4x MSAA); zet ze a
 | `--widescreen 16:10` | Hetzelfde voor 16:10-schermen (640×400), bijvoorbeeld de Steam Deck |
 | `--resolution <waarde>` | Interne renderresolutie (standaard `max`: het spel wordt op schermresolutie gerenderd in plaats van op 640×480 en daarna opgerekt, dus veel scherper). Andere waarden: `2x`, `3x`, `desktop`, `1920x1080`, of `unforced` voor het originele (wazige) beeld. Kies `2x` of `unforced` als het spel op een zwakke GPU hapert |
 | `--display window` | Spelen in een venster (standaard 2× de spelresolutie, 1280×960). `--display fullscreen` geeft echt (exclusief) volledig scherm; standaard is `borderless`, een randloos venster op schermgrootte dat goed werkt met alt-tab en Proton |
+| `--render-scale <1-4>` | Supersampling: dgVoodoo rendert op 2, 3 of 4 keer de resolutie en schaalt terug naar het scherm, voor gladdere randen dan MSAA alleen. Kost veel meer van de videokaart; werkt niet in een venster en niet met `unforced` |
 | `--fps-limit <n>` | Maximaal n beelden per seconde, bijvoorbeeld `60`. Standaard geen limiet: vsync houdt het beeld gelijk met het scherm. Het spel rekent met de echte tijd, dus ook op 144 of 240 Hz lopen beweging en sprongen even snel |
 | `--no-vsync` | Verticale synchronisatie uit. Kan beeldscheuren geven; combineer eventueel met `--fps-limit` |
 | `--msaa <waarde>` | Anti-aliasing (gladde randen): `off`, `2x`, `4x` (standaard), `8x` of `16x` |

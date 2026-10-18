@@ -28,6 +28,8 @@ if (options.ShowHelp)
                                      LB/RB wapen wisselen, Back scores, Start menu (alleen in het spel, niet in het menu)
           --resolution <waarde>      Interne renderresolutie van dgVoodoo2 (standaard "max": zo groot als het
                                      scherm toelaat; in een venster "2x"). Bijv. 3x, desktop, 1920x1080, of unforced
+          --render-scale <1-4>       Supersampling: renderen op een veelvoud van de resolutie en terugschalen naar het
+                                     scherm, voor gladdere randen (standaard 1: uit; niet in een venster)
           --display <modus>          borderless (standaard: randloos schermvullend), fullscreen (exclusief) of window
           --fps-limit <n>            Maximaal n beelden per seconde (standaard 0: geen limiet, alleen vsync)
           --no-vsync                 Verticale synchronisatie uit (kan beeldscheuren geven)
@@ -170,7 +172,7 @@ try
         var zip = await DgVoodoo.GetZipAsync(options.DgVoodooZip, msg => Console.WriteLine(msg));
         var display = choice.Display;
         DgVoodoo.Install(zip, outDir, display);
-        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, {display.Mode switch { DisplayMode.Window => "venster", DisplayMode.Fullscreen => "volledig scherm", _ => "schermvullend" }} {choice.Widescreen?.Name ?? "4:3"}, renderresolutie {display.GlideResolution})");
+        Console.WriteLine($"  [ok] dgVoodoo2 geïnstalleerd (DirectX/Glide-wrapper, {display.Mode switch { DisplayMode.Window => "venster", DisplayMode.Fullscreen => "volledig scherm", _ => "schermvullend" }} {choice.Widescreen?.Name ?? "4:3"}, renderresolutie {display.ConfResolution})");
         Console.WriteLine($"       MSAA {display.Antialiasing}, vsync {(display.VSync ? "aan" : "uit")}, fps-limiet {(display.FpsLimit == 0 ? "geen" : display.FpsLimit)}{(display.Crt ? ", CRT-effect" : "")}");
     }
 
@@ -285,6 +287,7 @@ static string Describe(Choice c) => string.Join(", ", new[]
     c.DebugLogs ? "logbestanden aan" : null,
     c.Display.Mode.ToString().ToLowerInvariant(),
     $"renderresolutie {c.Display.GlideResolution}",
+    c.Display.EffectiveRenderScale > 1 ? $"supersampling {c.Display.EffectiveRenderScale}x" : null,
     $"MSAA {c.Display.Antialiasing}",
     c.Display.VSync ? null : "vsync uit",
     c.Display.FpsLimit > 0 ? $"fps-limiet {c.Display.FpsLimit}" : null,
@@ -321,7 +324,7 @@ sealed class Options
     public Choice Choice => new() { Widescreen = Widescreen, Wasd = Wasd, Controller = Controller, DebugLogs = DebugLogs, Display = Display };
 
     private static readonly HashSet<string> ChoiceOptions =
-        ["--widescreen", "--wasd", "--controller", "--debug-logs", "--resolution", "--display", "--fps-limit", "--no-vsync", "--msaa", "--crt"];
+        ["--widescreen", "--wasd", "--controller", "--debug-logs", "--resolution", "--render-scale", "--display", "--fps-limit", "--no-vsync", "--msaa", "--crt"];
 
     public static Options Parse(string[] args)
     {
@@ -364,6 +367,14 @@ sealed class Options
                 case "--display":
                     var mode = Next();
                     o.Display = o.Display with { Mode = DisplayOptions.ParseMode(mode) ?? throw new PatchException($"--display: onbekende modus '{mode}' (kies borderless, fullscreen of window).") };
+                    break;
+                case "--render-scale":
+                    var scale = Next();
+                    o.Display = o.Display with
+                    {
+                        RenderScale = int.TryParse(scale, out int factor) && factor is >= 1 and <= DisplayOptions.MaxRenderScale ? factor
+                            : throw new PatchException($"--render-scale: '{scale}' is geen getal van 1 tot {DisplayOptions.MaxRenderScale}."),
+                    };
                     break;
                 case "--fps-limit":
                     var fps = Next();

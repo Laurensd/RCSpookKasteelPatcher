@@ -81,7 +81,7 @@ public sealed class BasisTests : IDisposable
 
     private const string DgVoodooConf =
         "[General]\r\nFullScreenMode = true\r\nScalingMode = stretched_ar\r\nCenterAppWindow = true\r\n" +
-        "[GeneralExt]\r\nFullscreenAttributes = fake\r\nFPSLimit = 0\r\n" +
+        "[GeneralExt]\r\nFullscreenAttributes = fake\r\nFPSLimit = 0\r\nResampling = bilinear\r\n" +
         "[Glide]\r\nResolution = max\r\nAntialiasing = 4x\r\nForceVerticalSync = true\r\n" +
         "[DirectX]\r\nResolution = unforced\r\n";
 
@@ -236,7 +236,7 @@ public sealed class BasisTests : IDisposable
         var wanted = new Choice
         {
             Widescreen = Widescreen.Wide16x10, Controller = true, DebugLogs = true,
-            Display = new DisplayOptions { Mode = DisplayMode.Window, Resolution = "1920x1080@60", FpsLimit = 144, VSync = false, Antialiasing = "off", Crt = true },
+            Display = new DisplayOptions { Mode = DisplayMode.Window, Resolution = "1920x1080@60", RenderScale = 2, FpsLimit = 144, VSync = false, Antialiasing = "off", Crt = true },
         };
         var ini = new LauncherIni(wanted, new Choice(), "ABC123");
         ini.Write(game);
@@ -254,7 +254,7 @@ public sealed class BasisTests : IDisposable
     {
         var game = MakeGame(GameVersion.V100);
         File.WriteAllText(Path.Combine(game, LauncherIni.FileName),
-            "[keuze]\r\nWidescreen=21:9\r\nWasd = 1 \r\nDisplay=Venster\r\nResolution=heel groot\r\nFpsLimit=-5\r\nMsaa=32x\r\nVSync=misschien\r\n");
+            "[keuze]\r\nWidescreen=21:9\r\nWasd = 1 \r\nDisplay=Venster\r\nResolution=heel groot\r\nRenderScale=9\r\nFpsLimit=-5\r\nMsaa=32x\r\nVSync=misschien\r\n");
 
         var ini = LauncherIni.Read(game)!;
         Assert.Null(ini.Applied);
