@@ -20,6 +20,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - run: dotnet test RedCatPatcher.slnx -c Release
+      # Zoals in de release: getrimd single-file met ReadyToRun, ook vanaf Linux
+      - name: Publish launcher (win-x64)
+        run: dotnet publish src/RedCatLauncher/RedCatLauncher.csproj -c Release -r win-x64 -o launcher-check
 
   release:
     name: Release
@@ -41,13 +44,17 @@ jobs:
             dotnet publish src/RedCatPatcher/RedCatPatcher.csproj -c Release -r "$rid" \
               -p:Version="$version" -o "dist/$rid"
           done
+          # De launcher is altijd een Windows-programma; op Linux draait hij onder Proton naast RedCat.exe
+          dotnet publish src/RedCatLauncher/RedCatLauncher.csproj -c Release -r win-x64 \
+            -p:Version="$version" -o dist/launcher
+          cp dist/launcher/RedCatLauncher.exe dist/win-x64/ && cp dist/launcher/RedCatLauncher.exe dist/linux-x64/
 
       - name: Package
         run: |
           mkdir -p out
           cp README.md dist/win-x64/ && cp README.md dist/linux-x64/
-          (cd dist/win-x64 && zip -9 "../../out/RedCatPatcher-${GITHUB_REF_NAME}-windows-x64.zip" RedCatPatcher.exe README.md)
-          (cd dist/linux-x64 && chmod +x RedCatPatcher && tar -czf "../../out/RedCatPatcher-${GITHUB_REF_NAME}-linux-x64.tar.gz" RedCatPatcher README.md)
+          (cd dist/win-x64 && zip -9 "../../out/RedCatPatcher-${GITHUB_REF_NAME}-windows-x64.zip" RedCatPatcher.exe RedCatLauncher.exe README.md)
+          (cd dist/linux-x64 && chmod +x RedCatPatcher && tar -czf "../../out/RedCatPatcher-${GITHUB_REF_NAME}-linux-x64.tar.gz" RedCatPatcher RedCatLauncher.exe README.md)
           (cd out && sha256sum * > SHA256SUMS.txt)
 
       - name: Release notes from CHANGELOG.md

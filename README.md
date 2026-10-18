@@ -8,15 +8,17 @@ installeert dgVoodoo2. Daarna start je het spel met `RedCat.exe`, zonder install
 
 ## Gebruik
 
-1. Zet `RedCatPatcher.exe` in een map met je disc-image, bijvoorbeeld:
+1. Zet `RedCatPatcher.exe` (en `RedCatLauncher.exe` uit dezelfde zip) in een map met je disc-image, bijvoorbeeld:
    ```
    RedCatPatcher.exe
+   RedCatLauncher.exe
    RedCatDisc\RedCat.cue
    RedCatDisc\RedCat.bin
    ```
 2. Dubbelklik op `RedCatPatcher.exe`. De patcher zoekt de disc zelf; anders kun je het `.cue`-bestand in het venster slepen.
 3. Kies of de patcher een snelkoppeling op het bureaublad en in het Startmenu maakt, en of hij RedCat aan Steam toevoegt.
-4. Start `RedCat Spookkasteel\RedCat.exe` (of via de snelkoppeling).
+4. Start `RedCat Spookkasteel\RedCat.exe` (of via de snelkoppeling), of eerst `RedCatLauncher.exe` om instellingen te
+   kiezen (zie [Launcher](#launcher)).
 
 Opties (opdrachtregel):
 
@@ -50,6 +52,24 @@ De patcher voert de installers niet uit maar pakt ze zelf uit, in de juiste volg
 Ondersteund zijn versie 1.0.0 van de cd-rom, met of zonder een of beide updates. Vindt de patcher een andere versie van een
 spelbestand of een onbekende update, dan stopt hij zonder te patchen en meldt hij de bestandsgrootte en SHA-256.
 [Meld die versie](https://github.com/Laurensd/RCSpookKasteelPatcher/issues), dan kan ze worden toegevoegd.
+
+### Launcher
+
+De patcher zet `RedCatLauncher.exe` in de spelmap, naast `RedCat.exe`. Daar kies je zonder opnieuw te patchen:
+beeldverhouding (4:3, 16:9, 16:10), WASD of pijltjestoetsen, de controller-indeling, weergave (randloos, volledig
+scherm, venster), renderresolutie, anti-aliasing, vsync, fps-limiet, CRT-effect en logbestanden. **Spelen** past een
+gewijzigde keuze toe en start het spel. Te bedienen met muis, toetsenbord of controller (d-pad of stick kiest en
+wisselt, A wisselt of speelt, Start speelt, B sluit), dus ook op de Steam Deck in de gamemodus.
+
+| Startoptie | Wat het doet |
+|---|---|
+| `--spelen` | Zonder venster: de keuze toepassen en het spel starten (handig als Steam-startoptie). Bij een fout verschijnt het venster met de melding |
+| `--software` | Tekenen zonder videokaart, als het venster leeg of zwart blijft |
+
+De keuze staat in `RedCatLauncher.ini` in de spelmap. De launcher bouwt de spelbestanden op uit een kopie van de
+originelen (`RedCatPatcher\basis`), die de patcher bewaart; een installatie van een oudere patcher moet daarvoor één
+keer opnieuw gepatcht worden. Opnieuw patchen zonder opties houdt de keuze uit de launcher. Het spel moet dicht zijn
+tijdens het toepassen. WASD geldt voor nieuwe spelers en de knop Standaard; bestaande spelers houden hun eigen toetsen.
 
 ### Extra opties
 
@@ -156,7 +176,8 @@ Vereist de [.NET 10 SDK](https://dotnet.microsoft.com/download).
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-De executables komen in `dist/win-x64` en `dist/linux-x64`. Tests draaien met `dotnet test RedCatPatcher.slnx`.
+De executables komen in `dist/win-x64` en `dist/linux-x64`, elk met `RedCatLauncher.exe` (altijd de Windows-versie; op
+Linux draait hij onder Proton). Tests draaien met `dotnet test RedCatPatcher.slnx`.
 
 ### Release maken
 
