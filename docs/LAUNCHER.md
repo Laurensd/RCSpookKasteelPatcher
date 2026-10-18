@@ -119,8 +119,8 @@ leest het bestand bij elke start van het spel. De launcher hoeft de zip niet opn
 
 De patcher kiest standaard "uit" (groep 1); de launcher maakt er een schakelaar van. Herhaalbaar: dezelfde situatie als
 breedbeeld, binaire patches zonder weg terug. Het opruimen (`DebugLogs.Clean`) kan de launcher als losse knop aanbieden.
-Omdat de `[Debug]`-sleutels (groep 3) alleen iets in deze logs zetten, zet de launcher de logs aan zodra een van die
-sleutels aan staat.
+De meeste `[Debug]`-sleutels (groep 3) zetten alleen iets in deze logs; zet de launcher zo'n sleutel aan, dan ook de
+logs. De console (zie "`AdamWin.ini [Debug]`") toont de log ook zonder logbestanden en heeft ze niet nodig.
 
 ## Groep 3: testen
 
@@ -144,10 +144,23 @@ De cd-rom heeft 46 sleutels, allemaal `0`: `DebugActorLighting`, `DebugAnyActor`
 `DebugSound`, `DebugSprite`, `DebugStartup`, `DebugUseConsole`, `DebugWayPoint`, `DebugWindowsMessage`.
 
 Bekend uit eerder onderzoek (`TECHNISCH.md`): `DebugDriver` (gekozen driver en modus in de log), `DebugLoading`,
-`DebugPlayerPosition` (positie per frame), `DebugFileNumber` (nummer van `AdamDebug%02d.log`). De rest is niet
-onderzocht. `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole` zijn de moeite van een blik in de disassembly
-waard: als de engine zelf al cheats, toetscommando's of een console heeft, is dat een in-game debugmenu zonder eigen
-code. `DebugFake*` laten het spel bewust crashen; die horen niet als gewone schakelaar in de launcher.
+`DebugPlayerPosition` (positie per frame), `DebugFileNumber` (nummer van `AdamDebug%02d.log`). `DebugFake*` laten
+het spel bewust crashen; die horen niet als gewone schakelaar in de launcher.
+
+Onderzocht in stap 8 (details en adressen in `TECHNISCH.md`, "Console, cheats en debugtoetsen"): de engine heeft al
+een console, een cheatmenu in het Esc-menu en debugtoetsen.
+
+| Wat | Aan met | Doet | Voor de Testen-tab |
+|---|---|---|---|
+| Console (`` ` ``) | `DebugSecretCommands=1`, of `Console=1` in `[General]` van `Player%d.ini` | log in beeld; `HELP`, `SETTINGS`, `<instelling> = <waarde>`, `RESTART`, `QUIT`, `cheats on` | ja, via `Player10.ini` |
+| Esc-menu "Cheats..." | `DebugSecretCommands=1`, of `cheats on` in de console | volgende level, ga naar level, door muren, godmodus, geef alles, effecten | ja (zie console) |
+| Debugtoetsen F1–F11 en letters | alleen `DebugSecretCommands=1` | o.a. F9 godmodus, F6 door muren, F5 framerate, F3 teleport, C vrije camera, S spelsnelheid | ja, met waarschuwing |
+| Laadlog in beeld | `DebugUseConsole=1` | console open tijdens laden, dicht zodra het level begint | ja, klein |
+| `DebugKeys` | `DebugKeys=1` | logt elke toetsaanslag als "unknown keypress" | nee, alleen ruis |
+
+De debugtoetsen botsen met de patcher: met `--wasd` zijn A (AI-info) en S (spel sneller) ook lopen, met `--controller`
+zijn LB/RB F5/F6 (framerate-info, botsing uit), en P is ook pauze. Getest op Windows met dgVoodoo2; console en
+cheatmenu tekenen via de engine (Glide), dus onder Proton naar verwachting hetzelfde, maar niet getest.
 
 Herhaalbaar: INI-waarden, `0` of `1`, dus triviaal. Een herinstallatie zet `AdamWin.ini` terug (het staat niet in
 `BackupUserData`); dat is goed zo.
@@ -339,8 +352,8 @@ Een menu tijdens het spel (zoals een debugmenu of een overlay) vraagt native cod
 | Werk | Weken, met een onzekere uitkomst (pauze, overlay onder DXVK) | Dagen, zodra de launcher bestaat |
 | Kan | Live dingen in het spel | Level kiezen, `[Debug]`-sleutels, logs aan/opruimen, logmap openen |
 
-Conclusie: geen eigen in-game menu. Eerst onderzoeken wat de engine zelf al heeft; blijkt `DebugSecretCommands` of
-`DebugUseConsole` bruikbaar, dan is dat een schakelaar op de Testen-tab. Een native laag hoort pas op tafel als er een
+Conclusie: geen eigen in-game menu. De engine heeft er zelf al een (stap 8): het Esc-menu krijgt "Cheats..." met
+volgende level, ga naar level, door muren vliegen en godmodus, en er is een console. Die zet de Testen-tab aan. Een native laag hoort pas op tafel als er een
 tweede reden voor is (bijvoorbeeld de XInput-laag voor het menu uit "Optie `--controller`", route (b)), en dan als
 eigen project met een proef onder Proton vóór er iets gebouwd wordt.
 
@@ -366,6 +379,14 @@ eigen project met een proef onder Proton vóór er iets gebouwd wordt.
    bureaublad en in het Startmenu. Steam start het venster, niet `--spelen` (zie "Keuze: wat Steam start").
 7. ~~**Tabblad Testen**~~ (gedaan, tabblad Testing): startlevel (`StartLevel`), `[Debug]`-sleutels (logs automatisch
    aan), logs opruimen, logmap openen. Zie "Tabblad Testing" onder groep 3.
-8. **Onderzoek** naar `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole` in de disassembly; wat bruikbaar is,
-   komt als schakelaar op de Testen-tab.
+8. ~~**Onderzoek** naar `DebugSecretCommands`, `DebugKeys` en `DebugUseConsole`~~ (gedaan, zie
+   "`AdamWin.ini [Debug]`" en `TECHNISCH.md`). Schakelaars voor het tabblad Testing (nog te bouwen):
+   - **Console en cheats** (standaard aan bij een testlevel): `Console=1` in `[General]` van `Player10.ini`, na de kopie
+     uit `PlayerDef.ini` in `StartLevel`. Raakt alleen testspeler 10, dus niet het gewone spelen en geen toetsbotsingen.
+     Uitleg in de launcher: `` ` `` opent de console, `cheats on` en dan Esc → "Cheats...".
+   - **Debugtoetsen** (standaard uit): `DebugSecretCommands=1`. Geeft ook direct het cheatmenu. Met een waarschuwing
+     als `--wasd` of `--controller` aan staat (A, S, F5, F6). `AdamWin.ini` geldt ook voor gewoon spelen, dus de
+     launcher zet hem alleen voor een teststart en bij Play weer op `0`.
+   - **Laadlog in beeld** (standaard uit): `DebugUseConsole=1`, met dezelfde regel voor gewoon spelen.
+   - Geen schakelaar voor `DebugKeys` (alleen ruis) en `DebugFake*` (crashes).
 9. Pas daarna, en alleen met een tweede reden, een besluit over native code in het spel.

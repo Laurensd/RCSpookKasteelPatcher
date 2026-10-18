@@ -646,3 +646,132 @@ Patch met `--debug-logs`, anders schrijft het spel geen logbestanden. Met `Debug
 logt `AdamDebug*.log` dan ook de gekozen driver en modus. Met
 `FullScreenMode = false` in `dgVoodoo.conf` draait het spel in een venster (zet dan ook `[Glide] Resolution` op
 `2x` of `unforced`, anders wordt het venster schermgroot).
+
+## Console, cheats en debugtoetsen (`AdamWin.ini [Debug]`)
+
+Onderzocht in `RcHcGame.dat` 1.0.0 (adressen hieronder) en getest in het spel op Windows 11 met dgVoodoo2 in een venster.
+Elke `[Debug]`-sleutel heeft een eigen getter die één keer een instellingsobject aanmaakt (`0x5AC5D0`, sectie `Debug`
+van `.\ADAMWIN.INI`) en het in een globale variabele bewaart; de waarde staat als int op `+0x64` en wordt bij het eerste
+gebruik met `atoi` uit de tekst op `+0x18` gehaald. Zoeken op de sleutelnaam geeft dus de getter, en de aanroepers van
+de getter zijn de plekken waar de sleutel iets doet.
+
+| Sleutel | Getter | Globaal | Aanroepers |
+|---|---|---|---|
+| `DebugSecretCommands` | `0x515570` | `0x6B98BC` | `0x4BC7F5`, `0x4C0B87`, `0x522DEC`, `0x532068` |
+| `DebugKeys` | `0x5184B0` | `0x6B9918` | `0x4C07A8` |
+| `DebugUseConsole` | `0x5196B0` | `0x6B9938` | `0x497F90`, `0x49855F`, `0x4BE353`, `0x4BE3C7`, `0x4BFBEA`, `0x52D81F`, `0x52DDEE` |
+
+### De console (`CAdamConsole`, `AdamConsole.cpp`)
+
+Een tekstvenster over de bovenste helft van het beeld, getekend met het lettertype van de engine, dus via Glide en
+dgVoodoo zoals de HUD. Het toont de engine-log (dezelfde regels als `AdamDebug*.log`, ook als de patcher de
+logbestanden heeft uitgezet: de console hangt aan de log, niet aan de schrijver van het bestand) en heeft een
+invoerregel `>>`. Openen en sluiten met de actie `ToggleConsole` uit `[KeyBinds]` (standaard `` ` ``); zolang hij open
+is, gaan toetsen naar de console (`0x5940C0`) en niet naar het spel.
+
+De toets werkt alleen als vlag `+0x39C` van de applicatie aan staat (`0x4BEFCB`). Die wordt bij het starten gezet
+(`0x4BC7F5`–`0x4BC909`) als **`DebugSecretCommands=1`**, of als **`Console=1`** in `[General]` van het
+`Player%d.ini`-bestand van de huidige speler staat (`0x43AEB0` geeft `.\Settings\Player%d.ini`). Die tweede route
+kent het menu niet; het menu schrijft met `TIniFile`/`WritePrivateProfileString`, dus een extra sleutel blijft staan.
+
+Commando's (`HELP` geeft de lijst, hoofdletters maken niet uit):
+
+| Commando | Wat |
+|---|---|
+| `HELP` | lijst met commando's |
+| `SETTINGS [deel van naam]` | alle instellingen (INI-sleutels die de engine kent) met hun huidige waarde, bijv. `settings debug` |
+| `<instelling> = <waarde>` | instelling tijdens het spel wijzigen |
+| `EXEC DaviName.Command` | commando naar een spelobject sturen (zoals de scripts van de levels doen) |
+| `RESTART` | sublevel opnieuw starten |
+| `QUIT` | spel afsluiten |
+| `CHEATS [on/off]` | (niet in `HELP`) cheats aan/uit: zet vlag `+0xAC` van het spel (`0x529430`), zodat het Esc-menu "Cheats..." krijgt |
+
+### Het cheatmenu in het spel
+
+Het Esc-menu (`CAdamGame::DisplayMenu`, `0x52E600`) krijgt de regel **Cheats...** als vlag `+0xAC` aan staat
+(`0x53169C`). Die vlag is aan bij `DebugSecretCommands=1` (`0x522DEC`) of na `cheats on` in de console. Inhoud
+(teksten uit het spel; bedienen met pijltjes en Enter):
+
+| Regel | Wat | Getest |
+|---|---|---|
+| Volgende level | sublevel afronden: overzichtsscherm, daarna het volgende sublevel | ja: Het Bos → Het Kasteel |
+| Ga naar level `[SubLevel1_n]` | naar een gekozen sublevel | nee |
+| Door muren vliegen `[AAN/UIT]` | geen botsingen | ja: RedCat loopt de kasteelmuur in |
+| Godmodus `[AAN/UIT]` | onkwetsbaar; gaat bij een nieuw sublevel weer uit | ja (aangezet met F9, zichtbaar in het menu) |
+| Geef alles behalve sleutels / Geef alles | voorwerpen, met of zonder sleutels | nee |
+| Effecten `[0–3]` | grafische details | nee |
+
+Let op: "Volgende level" schrijft de voortgang van de speler (`[Level1] CurrentSubLevel=SubLevel1_2` in
+`Player%d.ini`). Met speler 10 van `--start-level` is dat geen probleem; met een echte speler wel.
+
+Met `DebugSecretCommands=1` krijgt "Weergave..." ook een keuze Effecten (`0x532068`, teksten `0x71`–`0x74`); niet
+in het spel bekeken.
+
+### Debugtoetsen (`AdamApplication.cpp`, alleen met `DebugSecretCommands=1`)
+
+`0x4C0B50` registreert de toetsen alleen als `DebugSecretCommands` aan staat (anders sprong naar `0x4C268D`); `Console=1`
+of `cheats on` geven ze niet (getest: F5 doet dan niets). Elke toets is `(vk, modus, tekst, functie, herhalen)` via
+`0x4C4F00`; de toetsen worden elk frame gepold (`0x4BFFA0`, `0x5A9790`). Modus 0: altijd, ook met Shift/Ctrl;
+1: zonder Shift en Ctrl; 2: met Shift; 3: met Ctrl (sprongtabel `0x4C0864`).
+
+| Toets | Wat (tekst uit het spel) | Opmerking |
+|---|---|---|
+| F1 / Shift+F1 | lijst met commando's / statistieken | F1 gaf in de test niets zichtbaars |
+| F2, Shift+F2 | frame-calling / AddPoly aan/uit (prestatietest) | |
+| F3 | naar het volgende deathmatch-startpunt | teleport |
+| F4 | screenshot `ScreenDump%d.bmp` ("Glide only") | |
+| F5 | framerate en statistieken van Genesis | getest: werkt |
+| F6 | botsing van de speler aan/uit | = door muren |
+| F9 | godmodus aan/uit | getest: werkt |
+| F10 | vaardigheden doorlopen (Skill Shot, Power Shot, Super Jump, Super Shot) | |
+| F11 | "fast keys" aan/uit | |
+| Ctrl+F2, Ctrl+F8, `9`, `0` | prestatietest, wireframe, gouraud, additive light | functie `0x4C8780` is `mov al,1; ret`: doet niets |
+| Shift+`,` / Shift+`.` | camera links/rechts | |
+| A | AI-info tekenen | modus 0 |
+| B / Shift+B | bounding boxes / tekenmodus | |
+| C / Shift+C | camera neerzetten / oppakken | vrije camera |
+| E | test-explosie | |
+| F, G, R, V, X, Z (Shift = omlaag) | FOV, gamma, renderrechthoek, volume, richtkruis, camera-ZScale | houden herhaalt |
+| H | HUD aan/uit | getest: verbergt delen van de HUD |
+| I | interlacing | |
+| K | speler onzichtbaar | in de test geen zichtbaar effect |
+| L | low-end-pc-instellingen | |
+| P | paden tekenen | |
+| S / Shift+S | spelobjecten sneller / langzamer | houden herhaalt |
+| Shift+T | alle tekst aan/uit | |
+| M | test-assertion (bewuste crash) | alleen met ook `DebugFakeAssertion=1` (`0x558710`) |
+
+Botsingen met de patcher: met `--wasd` is A ook draaien/zijwaarts en S achteruit, dus lopen zet de AI-info aan en
+versnelt het spel. Met `--controller` zijn LB/RB F5/F6, dus wapen wisselen zet de framerate-info en de botsing van de
+speler aan en uit. P is ook `Pause`. Met de oude pijltjestoetsen en zonder `--controller` botst alleen P.
+
+### `DebugKeys` en `DebugUseConsole`
+
+- **`DebugKeys`** (`0x4C07A8`): logt elke `WM_CHAR` (`0x102`) als `unknown keypress %c %d (%X)`. Geen functie; ook
+  toetsen die wel iets doen (zoals W) verschijnen, omdat de echte toetsen gepold worden. Alleen ruis in de log/console.
+- **`DebugUseConsole`**: opent de console automatisch tijdens het opstarten en laden (`0x4BE353`, `0x497F90`,
+  `0x52D81F`) en sluit hem weer als het spel `GS_GAME` ingaat (`0x4BE3C7`, `0x49855F`, `0x52DDEE`); vlag `+0x391`
+  onthoudt dat de console automatisch open ging. Getest: de laadlog staat in beeld tot het level begint. Geeft geen
+  invoer of commando's buiten de laadschermen.
+
+### Overige `[Debug]`-sleutels
+
+Op dezelfde manier gevonden (getter met aantal aanroepers): `DebugScript` (71), `DebugLoading` (57), `DebugSound` (35),
+`DebugDriver` (31), `DebugPlanetoid` (20), `DebugWindowsMessage` (15), `DebugGameState` (14), `DebugDamage` (13),
+`DebugWayPoint` (12), `DebugCriticalSection` (12), `DebugFont` (11), `DebugSkipFonts` (10), `DebugMouse` (9),
+`DebugDInput` (8), `DebugSprite` (6), `DebugSkipHighASCIIValues` (6), `DebugAnyActor`, `DebugDisplayMessage`, `DebugModel`
+(5), `DebugCommand`, `DebugParentChild`, `DebugBitmap` (4), `DebugCleanup` (3), `DebugLowEndPC`, `DebugDisableCoronas`,
+`DebugFileNumber` (2) en met één aanroeper `DebugPlayerCollision`, `DebugPlayerPosition`, `DebugLight`, `DebugPrintInfo`,
+`DebugStartup`, `DebugActorLighting`, `DebugProjectile`, `DebugFontNoAntialias`, `DebugProcessAllActorFiles`,
+`DebugFakeAssertion`, `DebugFakeDriverCrash`, `DebugFakeSoundCrash`, `DebugFakeSoundFailure`. Naar hun naam en
+aanroepplaats voegen de meeste alleen logregels toe; niet verder onderzocht. `DebugGrobbers`, `DebugHeavy`,
+`DebugMemCheckPoint` en `DebugRGB` staan in `AdamWin.ini` maar worden door de code niet gelezen. Omgekeerd leest de code
+`DebugMessage` (`0x523010`), die niet in de INI staat.
+
+### Niet getest
+
+- Proton en de Steam Deck. De console en het cheatmenu tekenen met de engine zelf via Glide, net als de HUD, dus er is
+  geen reden waarom ze daar anders zouden werken; de `` ` ``-toets heeft op de Deck wel een toetsenbord nodig
+  (`ToggleConsole` is een gewone `[KeyBinds]`-actie en kan naar een andere toets).
+- 1.0.1 en de XP-build: de strings en de structuur zijn naar verwachting gelijk, de adressen niet.
+- Of `<instelling> = <waarde>` in de console ook naar het INI-bestand schrijft.
