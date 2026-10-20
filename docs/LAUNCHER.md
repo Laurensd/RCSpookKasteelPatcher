@@ -298,7 +298,7 @@ De Steam-regel start **het launchervenster**, zonder startopties. Afwegingen:
 
 ## Proef GUI-framework (stap 4)
 
-Code en teststappen: [`spikes/launcher`](../spikes/launcher/README.md). Twee keer hetzelfde venster (Spelen, Afsluiten,
+Code en teststappen (inmiddels verwijderd): `spikes/launcher` in commit [`0d49696`](https://github.com/Laurensd/RCSpookKasteelPatcher/tree/0d49696/spikes/launcher). Twee keer hetzelfde venster (Spelen, Afsluiten,
 XInput-controller), single-file win-x64, self-contained .NET 10. Gemeten op Windows 11 (17-10-2026), gemiddelde van
 vijf starts tot het venster getoond is:
 
@@ -316,7 +316,7 @@ Bevindingen tot nu toe:
 
 - **Beide werken op Windows**: venster, focusrand, Enter op Spelen start `RedCat.exe` en sluit de launcher.
 - **Controller**: geen van beide frameworks leest zelf een gamepad. Een eigen XInput-poll van ~50 regels (gedeeld in
-  `Shared/Spike.cs`) is genoeg voor d-pad/stick, A en B; onder Steam Input komt de Deck-controller standaard als
+  `Shared/Spike.cs` van de proef) is genoeg voor d-pad/stick, A en B; onder Steam Input komt de Deck-controller standaard als
   XInput-pad binnen. Dit is dus geen onderscheid tussen de frameworks.
 - **Grootte en trimmen** pleiten voor Avalonia: getrimd 27 MB tegen 47 MB, en dezelfde trimbuild als de patcher. De
   prijs is 0,2 s extra opstarttijd en native Skia/HarfBuzz/ANGLE-DLL's die bij de eerste start uitgepakt worden.

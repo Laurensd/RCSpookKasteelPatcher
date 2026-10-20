@@ -5,6 +5,8 @@ Opmaak volgens [Keep a Changelog](https://keepachangelog.com/nl/1.1.0/), versies
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-20
+
 ### Toegevoegd
 - `RedCatLauncher.exe` naast `RedCat.exe`: kies breedbeeld, besturing, controller-indeling, beeldopties en logbestanden zonder opnieuw te patchen, en start het spel. Werkt met muis, toetsenbord en controller (ook op de Steam Deck in de gamemodus), en met `--spelen` zonder venster. De patcher zet de launcher in de spelmap; de release-zip en -tar.gz bevatten hem.
 - De patcher bewaart een kopie van de spelbestanden vóór de fixes (`RedCatPatcher\basis` in de spelmap) en schrijft de gekozen opties naar `RedCatLauncher.ini`. Daarmee kan de launcher later een andere keuze toepassen en terugdraaien zonder de disc.
@@ -70,6 +72,7 @@ Eerste release. Maakt de cd-rom van RedCat Spookkasteel v1.0.0 (Davilex, 2000) s
 - **Cd vereist.** Niet meer: alles staat lokaal en er zijn geen registersleutels nodig.
 - Grafische fouten met de oude DirectX/Glide-drivers op moderne videokaarten, zoals negatief gerapporteerd videogeheugen, opgelost met dgVoodoo2.
 
-[Unreleased]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Laurensd/RCSpookKasteelPatcher/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Laurensd/RCSpookKasteelPatcher/releases/tag/v0.1.0
